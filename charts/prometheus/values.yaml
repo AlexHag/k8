@@ -1,9 +1,150 @@
 prometheus:
   pushgateway:
     enabled: false
-  alertmanager:
-    persistence:
-      enabled: false
+  
+  # Prometheus server configuration
   server:
+    # Enable persistent storage (recommended for production)
     persistentVolume:
       enabled: false
+    
+    # Retention period for metrics
+    retention: "15d"
+  
+  # Service monitors for automatic discovery
+  serviceAccounts:
+    server:
+      create: true
+      annotations: {}
+  
+  serverFiles:
+    prometheus.yml:
+      scrape_configs:
+        # Scrape Prometheus itself
+        - job_name: prometheus
+          static_configs:
+            - targets:
+              - localhost:9090
+        
+        # Kubernetes API server
+        - job_name: 'kubernetes-apiservers'
+          kubernetes_sd_configs:
+            - role: endpoints
+          scheme: https
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+              action: keep
+              regex: default;kubernetes;https
+        
+        # Kubernetes nodes
+        - job_name: 'kubernetes-nodes'
+          kubernetes_sd_configs:
+            - role: node
+          scheme: https
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          relabel_configs:
+            - action: labelmap
+              regex: __meta_kubernetes_node_label_(.+)
+        
+        # Kubernetes pods (auto-discover services with prometheus annotations)
+        - job_name: 'kubernetes-pods'
+          kubernetes_sd_configs:
+            - role: pod
+          relabel_configs:
+            # Only scrape pods with prometheus.io/scrape: "true" annotation
+            - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+              action: keep
+              regex: true
+            # Use custom scrape path if specified
+            - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+              action: replace
+              target_label: __metrics_path__
+              regex: (.+)
+            # Use custom port if specified
+            - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+              action: replace
+              regex: ([^:]+)(?::\d+)?;(\d+)
+              replacement: $1:$2
+              target_label: __address__
+            # Add pod metadata as labels
+            - action: labelmap
+              regex: __meta_kubernetes_pod_label_(.+)
+            - source_labels: [__meta_kubernetes_namespace]
+              action: replace
+              target_label: kubernetes_namespace
+            - source_labels: [__meta_kubernetes_pod_name]
+              action: replace
+              target_label: kubernetes_pod_name
+        
+        # Kubernetes services (auto-discover services with prometheus annotations)
+        - job_name: 'kubernetes-services'
+          kubernetes_sd_configs:
+            - role: service
+          metrics_path: /metrics
+          relabel_configs:
+            # Only scrape services with prometheus.io/scrape: "true" annotation
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+              action: keep
+              regex: true
+            # Use custom scrape path if specified
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+              action: replace
+              target_label: __metrics_path__
+              regex: (.+)
+            # Use custom port if specified
+            - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+              action: replace
+              regex: ([^:]+)(?::\d+)?;(\d+)
+              replacement: $1:$2
+              target_label: __address__
+            # Add service metadata as labels
+            - action: labelmap
+              regex: __meta_kubernetes_service_label_(.+)
+            - source_labels: [__meta_kubernetes_namespace]
+              action: replace
+              target_label: kubernetes_namespace
+            - source_labels: [__meta_kubernetes_service_name]
+              action: replace
+              target_label: kubernetes_service_name
+        
+        # Envoy Gateway metrics
+        - job_name: 'envoy-gateway'
+          kubernetes_sd_configs:
+            - role: pod
+              namespaces:
+                names:
+                  - envoy-gateway-system
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_label_control_plane]
+              action: keep
+              regex: envoy-gateway
+            - source_labels: [__address__]
+              action: replace
+              regex: ([^:]+)(?::\d+)?
+              replacement: $1:8443
+              target_label: __address__
+            - source_labels: [__meta_kubernetes_pod_name]
+              action: replace
+              target_label: pod
+            - source_labels: [__meta_kubernetes_namespace]
+              action: replace
+              target_label: namespace
+  
+  # Alert manager (optional but recommended)
+  alertmanager:
+    enabled: true
+    persistence:
+      enabled: false
+  
+  # Node exporter for host-level metrics
+  prometheus-node-exporter:
+    enabled: true
+  
+  # Kube-state-metrics for Kubernetes object metrics
+  kube-state-metrics:
+    enabled: true

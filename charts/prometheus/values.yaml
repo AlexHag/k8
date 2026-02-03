@@ -1,3 +1,9 @@
 prometheus:
   pushgateway:
     enabled: false
+  alertmanager:
+    persistence:
+      enabled: false
+  server:
+    persistence:
+      enabled: false

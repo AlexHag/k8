@@ -5,5 +5,5 @@ prometheus:
     persistence:
       enabled: false
   server:
-    persistence:
+    persistentVolume:
       enabled: false

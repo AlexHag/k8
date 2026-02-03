@@ -11,6 +11,8 @@ spec:
     repoURL: https://github.com/AlexHag/k8.git
     path: charts/root-app/
     targetRevision: HEAD
+    helm:
+      releaseName: root-app
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

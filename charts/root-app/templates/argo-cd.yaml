@@ -11,6 +11,8 @@ spec:
     repoURL: https://github.com/AlexHag/k8.git
     path: charts/argo-cd/
     targetRevision: HEAD
+    helm:
+      releaseName: argo-cd
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

@@ -7,6 +7,9 @@ spec:
   provider:
     type: Kubernetes
     kubernetes:
+      envoyDeployment:
+        name: envoy-gateway-proxy
       envoyService:
+        name: envoy-gateway-proxy
         type: ClusterIP
         externalTrafficPolicy: Cluster

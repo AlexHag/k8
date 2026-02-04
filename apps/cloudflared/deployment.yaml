@@ -13,11 +13,6 @@ spec:
       labels:
         pod: cloudflared
     spec:
-      securityContext:
-        sysctls:
-        # Allows ICMP traffic (ping, traceroute) to resources behind cloudflared.
-          - name: net.ipv2.ping_group_range
-            value: "65532 65532"
       containers:
         - image: cloudflare/cloudflared:latest
           name: cloudflared

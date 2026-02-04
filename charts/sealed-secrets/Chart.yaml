@@ -1,0 +1,10 @@
+apiVersion: v2
+name: sealed-secrets
+type: application
+version: 1.0.0
+description: Helm chart for Sealed Secrets
+dependencies:
+  - name: sealed-secrets
+    version: 2.17.9
+    repository: https://bitnami-labs.github.io/sealed-secrets
+

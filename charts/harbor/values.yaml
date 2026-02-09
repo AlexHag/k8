@@ -1,7 +1,5 @@
 harbor:
-  # Cloudflare provides edge TLS. Inside-cluster traffic (cloudflared -> envoy -> harbor) is HTTP.
-  # Change this to your real hostname.
-  externalURL: https://harbor.example.com
+  externalURL: https://harbor.patchdb.se
 
   expose:
     type: clusterIP

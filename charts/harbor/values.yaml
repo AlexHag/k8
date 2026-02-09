@@ -1,6 +1,9 @@
 harbor:
   externalURL: https://harbor.patchdb.se
 
+  existingSecretAdminPassword: "harbor-admin-password"
+  existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
+
   expose:
     type: clusterIP
     tls:

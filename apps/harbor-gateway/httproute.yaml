@@ -15,5 +15,5 @@ spec:
         type: PathPrefix
         value: /
     backendRefs:
-    - name: harbor-nginx
+    - name: harbor
       port: 80

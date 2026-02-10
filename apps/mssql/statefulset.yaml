@@ -4,7 +4,7 @@ metadata:
   name: mssql
   namespace: mssql
   labels:
-  app: mssql
+    app: mssql
 spec:
   serviceName: mssql
   replicas: 1

@@ -9,9 +9,18 @@ harbor:
     tls:
       enabled: false
 
-  # POC mode: no persistent volumes available. Harbor data will be lost on restart.
   persistence:
-    enabled: false
+    enabled: true
+    persistentVolumeClaim:
+      registry:
+        size: 10Gi
+      database:
+        size: 2Gi
+      redis:
+        size: 1Gi
+      jobservice:
+        jobLog:
+          size: 1Gi
 
   # Reduce footprint for a small cluster / POC.
   trivy:

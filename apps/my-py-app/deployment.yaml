@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-py-app
+  namespace: default
+  labels:
+    app: my-py-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-py-app
+  template:
+    metadata:
+      labels:
+        app: my-py-app
+    spec:
+      imagePullSecrets:
+      - name: harbor-regcred
+        namespace: harbor
+      containers:
+      - name: my-py-app
+        image: harbor.patchdb.se/apps/my-py-app:0.1.0
+        ports:
+        - containerPort: 8000
+          name: http
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 20

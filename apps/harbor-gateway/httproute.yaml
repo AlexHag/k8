@@ -14,6 +14,12 @@ spec:
     - path:
         type: PathPrefix
         value: /
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        set:
+        - name: X-Forwarded-Proto
+          value: https
     backendRefs:
     - name: harbor
       port: 80

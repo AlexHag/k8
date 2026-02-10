@@ -19,7 +19,7 @@ spec:
       - name: harbor-regcred
       containers:
       - name: my-py-app
-        image: harbor.patchdb.se/apps/my-py-app:0.3.0
+        image: harbor.patchdb.se/apps/my-py-app:0.4.0
         ports:
         - containerPort: 8000
           name: http

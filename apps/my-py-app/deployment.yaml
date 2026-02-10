@@ -19,10 +19,16 @@ spec:
       - name: harbor-regcred
       containers:
       - name: my-py-app
-        image: harbor.patchdb.se/apps/my-py-app:0.1.0
+        image: harbor.patchdb.se/apps/my-py-app:0.2.0
         ports:
         - containerPort: 8000
           name: http
+        env:
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mssql-sa-password
+                key: MSSQL_SA_PASSWORD
         readinessProbe:
           httpGet:
             path: /

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: local-path-provisioner
+type: application
+version: 1.0.0
+description: Helm values for Rancher Local Path Provisioner (chart sourced from GitHub)

@@ -48,7 +48,9 @@ spec:
         - name: mssql-data
           mountPath: /var/opt/mssql
   volumeClaimTemplates:
-  - metadata:
+  - apiVersion: v1	
+    kind: PersistentVolumeClaim
+    metadata:
       name: mssql-data
     spec:
       accessModes:

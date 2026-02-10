@@ -1,6 +1,6 @@
 import os
 import pymssql
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 
 app = Flask(__name__)
 
@@ -61,7 +61,7 @@ def init_db():
 
 @app.route("/")
 def home():
-    return jsonify({"message": "TODO App – connected to MSSQL"})
+    return send_from_directory(".", "index.html")
 
 
 @app.route("/todos", methods=["GET"])

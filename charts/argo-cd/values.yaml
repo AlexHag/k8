@@ -23,6 +23,7 @@ argo-cd:
                 - openid
                 - profile
                 - email
+                - groups
             type: oidc
             id: google
             name: Google
@@ -31,4 +32,4 @@ argo-cd:
       policy.csv: |
         g, alex.hagdahl.jobb@gmail.com, role:admin
       policy.default: role:readonly
-      scopes: "[email]"
+      scopes: "[groups]"

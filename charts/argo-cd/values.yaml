@@ -11,8 +11,8 @@ argo-cd:
   
   configs:
     cm:
+      url: https://argocd.patchdb.se
       dex.config: |
-        url: https://argocd.patchdb.se
         connectors:
           - config:
               issuer: https://accounts.google.com

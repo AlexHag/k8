@@ -19,7 +19,11 @@ argo-cd:
               clientID: 887433635495-15fkr6p1qbjhomviud1q7d9mfqj8qhg1.apps.googleusercontent.com
               clientSecret: $argocd-google-oauth:client-secret
               redirectURI: https://argocd.patchdb.se/api/dex/callback
-            type: google
+              scopes:
+                - openid
+                - profile
+                - email
+            type: oidc
             id: google
             name: Google
 

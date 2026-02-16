@@ -1,0 +1,76 @@
+langfuse:
+  # TODO: Auth through Google OAuth
+  # -- Security
+  salt:
+    value: "mysalt"
+  nextauth:
+    secret:
+      value: "mysecret"
+  encryptionKey:
+    value: "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
+
+  # -- Telemetry
+  telemetry:
+    enabled: false
+
+  # -- Experimental features
+  extraEnvVars:
+    - name: LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES
+      value: "true"
+
+  # -- Init org/project/user for bootstrapping - Not needed if we manage auth through Google...?
+  init:
+    org:
+      id: "patchdb"
+      name: "patchdb"
+    project:
+      id: "patchdb"
+      name: "patchdb"
+      publicKey: "publickey"
+      secretKey: "secretkey"
+    user:
+      email: "eng-testing@patchdb.app"
+      name: "testing-user"
+      password: "password"
+
+  # -- Web service
+  web:
+    replicas: 1
+
+  # -- Worker service
+  worker:
+    replicas: 1
+
+# -- PostgreSQL sub-chart configuration
+postgresql:
+  # TODO: Host elsewhere
+  # deploy: false
+  # host: <host-url.com>
+  auth:
+    username: postgres
+    password: postgres
+    database: postgres
+
+# -- ClickHouse sub-chart configuration
+clickhouse:
+  auth:
+    # TODO: Secrets
+    username: clickhouse
+    password: clickhouse
+
+# -- Redis sub-chart configuration
+redis:
+  # TODO: Host elsewhere
+  # deploy: false
+  # host: <host-url.com>
+  auth:
+    password: myredissecret
+
+# -- S3 (MinIO) sub-chart configuration
+s3:
+  # TODO: Host elsewhere (Azure Blob Storage)
+  auth:
+    rootUser: minio
+    rootPassword: miniosecret
+  defaultBuckets: langfuse
+

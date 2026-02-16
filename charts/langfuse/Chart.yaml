@@ -1,0 +1,10 @@
+apiVersion: v2
+name: langfuse
+type: application
+version: 1.0.0
+description: Helm wrapper chart for Langfuse
+dependencies:
+  - name: langfuse
+    version: 1.5.19
+    repository: https://langfuse.github.io/langfuse-k8s
+

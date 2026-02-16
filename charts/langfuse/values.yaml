@@ -1,76 +1,81 @@
 langfuse:
-  # TODO: Auth through Google OAuth
-  # -- Security
-  salt:
-    value: "mysalt"
-  nextauth:
-    secret:
-      value: "mysecret"
-  encryptionKey:
-    value: "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
+  # -- Core Langfuse application configuration
+  langfuse:
+    # TODO: Auth through Google OAuth
+    # -- Security
+    salt:
+      value: "mysalt"
+    nextauth:
+      secret:
+        value: "mysecret"
+    encryptionKey:
+      value: "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
 
-  # -- Telemetry
-  telemetry:
-    enabled: false
+    # -- Telemetry
+    features:
+      telemetryEnabled: false
+      experimentalFeaturesEnabled: true
 
-  # -- Experimental features
-  extraEnvVars:
-    - name: LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES
-      value: "true"
+    # -- Init org/project/user for bootstrapping - Not needed if we manage auth through Google...?
+    additionalEnv:
+      - name: LANGFUSE_INIT_ORG_ID
+        value: "patchdb"
+      - name: LANGFUSE_INIT_ORG_NAME
+        value: "patchdb"
+      - name: LANGFUSE_INIT_PROJECT_ID
+        value: "patchdb"
+      - name: LANGFUSE_INIT_PROJECT_NAME
+        value: "patchdb"
+      - name: LANGFUSE_INIT_PROJECT_PUBLIC_KEY
+        value: "publickey"
+      - name: LANGFUSE_INIT_PROJECT_SECRET_KEY
+        value: "secretkey"
+      - name: LANGFUSE_INIT_USER_EMAIL
+        value: "eng-testing@patchdb.app"
+      - name: LANGFUSE_INIT_USER_NAME
+        value: "testing-user"
+      - name: LANGFUSE_INIT_USER_PASSWORD
+        value: "password"
 
-  # -- Init org/project/user for bootstrapping - Not needed if we manage auth through Google...?
-  init:
-    org:
-      id: "patchdb"
-      name: "patchdb"
-    project:
-      id: "patchdb"
-      name: "patchdb"
-      publicKey: "publickey"
-      secretKey: "secretkey"
-    user:
-      email: "eng-testing@patchdb.app"
-      name: "testing-user"
-      password: "password"
+    # -- Web service
+    web:
+      replicas: 1
 
-  # -- Web service
-  web:
-    replicas: 1
+    # -- Worker service
+    worker:
+      replicas: 1
 
-  # -- Worker service
-  worker:
-    replicas: 1
+  # -- PostgreSQL sub-chart configuration
+  postgresql:
+    # TODO: Host elsewhere
+    # deploy: false
+    # host: <host-url.com>
+    auth:
+      username: postgres
+      password: postgres
+      database: postgres
 
-# -- PostgreSQL sub-chart configuration
-postgresql:
-  # TODO: Host elsewhere
-  # deploy: false
-  # host: <host-url.com>
-  auth:
-    username: postgres
-    password: postgres
-    database: postgres
+  # -- ClickHouse sub-chart configuration
+  clickhouse:
+    auth:
+      # TODO: Secrets
+      username: clickhouse
+      password: clickhouse
+    replicaCount: 1
+    resourcesPreset: small
 
-# -- ClickHouse sub-chart configuration
-clickhouse:
-  auth:
-    # TODO: Secrets
-    username: clickhouse
-    password: clickhouse
+  # -- Redis sub-chart configuration
+  redis:
+    # TODO: Host elsewhere
+    # deploy: false
+    # host: <host-url.com>
+    auth:
+      password: myredissecret
 
-# -- Redis sub-chart configuration
-redis:
-  # TODO: Host elsewhere
-  # deploy: false
-  # host: <host-url.com>
-  auth:
-    password: myredissecret
-
-# -- S3 (MinIO) sub-chart configuration
-s3:
-  # TODO: Host elsewhere (Azure Blob Storage)
-  auth:
-    rootUser: minio
-    rootPassword: miniosecret
-  defaultBuckets: langfuse
-
+  # -- S3 (MinIO) sub-chart configuration
+  s3:
+    # TODO: Host elsewhere (Azure Blob Storage)
+    auth:
+      rootUser: minio
+      rootPassword: miniosecret
+    defaultBuckets: langfuse

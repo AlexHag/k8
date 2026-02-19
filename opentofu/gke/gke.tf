@@ -1,7 +1,7 @@
 resource "google_container_cluster" "gke" {
-  name     = "${var.project_id}-gke"
+  name = "${var.project_id}-gke"
 
-  location                 = var.region
+  location = var.region
 
   enable_autopilot         = true
   enable_l4_ilb_subsetting = true

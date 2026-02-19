@@ -1,0 +1,29 @@
+name: "OpenTofu Apply GCP Enabled Services"
+
+on:
+  workflow_dispatch:
+    inputs:
+      OPENTOFU_VAR_FILE:
+        description: "Opentofu variables file"
+        required: false
+        type: string
+        default: "staging.tfvars"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TOFU_VERSION: "1.11.5"
+  WORKING_DIR: "opentofu/gcp-enabled-services"
+  GCP_WORKLOAD_IDENTITY_PROVIDER: "projects/615822691944/locations/global/workloadIdentityPools/github/providers/github"
+  GCP_SERVICE_ACCOUNT: "github-actions-tofu@alexk8s-test-proj.iam.gserviceaccount.com"
+
+jobs:
+  tofu_apply:
+    uses: AlexHag/k8/.github/workflows/reusable-opentofu-apply.yml@master
+    with:
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      GCP_SERVICE_ACCOUNT: ${{ env.GCP_SERVICE_ACCOUNT }}
+      OPENTOFU_PATH: ${{ env.WORKING_DIR }}
+      OPENTOFU_VAR_FILE: ${{ inputs.OPENTOFU_VAR_FILE }}

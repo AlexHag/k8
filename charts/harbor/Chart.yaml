@@ -1,9 +1,0 @@
-apiVersion: v2
-name: harbor
-type: application
-version: 1.0.0
-description: Helm wrapper chart for Harbor
-dependencies:
-  - name: harbor
-    version: 1.18.2
-    repository: https://helm.goharbor.io

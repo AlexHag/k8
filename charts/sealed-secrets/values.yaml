@@ -1,3 +1,0 @@
-sealed-secrets:
-  commandArgs:
-    - "--key-rotation-period=0"

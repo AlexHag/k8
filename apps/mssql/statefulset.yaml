@@ -33,10 +33,7 @@ spec:
         - name: MSSQL_AGENT_ENABLED # What is this?
           value: "1"
         - name: MSSQL_SA_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mssql-sa-password
-              key: MSSQL_SA_PASSWORD
+          value: "TempPasswordToChange123!"
         resources:
           requests:
             memory: "2Gi"
@@ -48,7 +45,7 @@ spec:
         - name: mssql-data
           mountPath: /var/opt/mssql
   volumeClaimTemplates:
-  - apiVersion: v1	
+  - apiVersion: v1
     kind: PersistentVolumeClaim
     metadata:
       name: mssql-data

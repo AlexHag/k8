@@ -13,6 +13,7 @@ spec:
       labels:
         pod: cloudflared
     spec:
+      serviceAccountName: cloudflared-secret-accessor
       containers:
         - image: cloudflare/cloudflared:latest
           name: cloudflared
@@ -31,6 +32,10 @@ spec:
             - --metrics
             - 0.0.0.0:2000
             - run
+          volumeMounts:
+            - name: secrets
+              mountPath: /mnt/secrets
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /ready
@@ -38,3 +43,10 @@ spec:
             failureThreshold: 1
             initialDelaySeconds: 10
             periodSeconds: 10
+      volumes:
+        - name: secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: cloudflared-secrets

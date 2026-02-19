@@ -1,0 +1,73 @@
+name: "OpenTofu Apply GKE"
+
+on:
+  workflow_dispatch:
+    inputs:
+      GCP_WORKLOAD_IDENTITY_PROVIDER:
+        description: "GCP Workload Identity Provider"
+        required: false
+        type: string
+        default: "projects/615822691944/locations/global/workloadIdentityPools/github/providers/github"
+      GCP_SERVICE_ACCOUNT:
+        description: "GCP Service Account"
+        required: false
+        type: string
+        default: "github-actions-tofu@alexk8s-test-proj.iam.gserviceaccount.com"
+      OPENTOFU_VAR_FILE:
+        description: "Opentofu variables file"
+        required: false
+        type: string
+        default: "staging.tfvars"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TOFU_VERSION: "1.11.5"
+  WORKING_DIR: "opentofu/gke"
+
+jobs:
+  tofu_apply:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+  
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ inputs.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ inputs.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+      
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+          tofu_wrapper: false
+
+      - name: OpenTofu Init
+        id: init
+        run: tofu init -var-file=tfvars/${{ inputs.OPENTOFU_VAR_FILE }}
+      
+      - name: Lint code
+        id: fmt
+        run: tofu fmt -check -recursive
+      
+      - name: OpenTofu Validate
+        id: validate
+        run: tofu validate -no-color
+      
+      - name: OpenTofu Plan
+        id: plan
+        run: tofu plan -var-file=tfvars/${{ inputs.OPENTOFU_VAR_FILE }} -no-color -out=tfplan
+
+      - name: OpenTofu Apply
+        id: apply
+        run: tofu apply tfplan

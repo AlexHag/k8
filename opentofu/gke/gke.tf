@@ -22,6 +22,16 @@ resource "google_container_cluster" "gke" {
     cluster_secondary_range_name  = google_compute_subnetwork.subnet.secondary_ip_range[1].range_name
   }
 
+  # Configure Workload Identity Federation
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  # Enable Secret Manager addon
+  secret_manager_config {
+    enabled = true
+  }
+
   # Set `deletion_protection` to `true` will ensure that one cannot
   # accidentally delete this instance by use of Terraform.
   deletion_protection = false

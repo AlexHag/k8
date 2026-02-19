@@ -19,7 +19,7 @@ gcloud projects create $GOOGLE_PROJECT
 gcloud config set project $GOOGLE_PROJECT
 ```
 
-3. Make sure the necessary APIs are enabled
+3. ~~Make sure the necessary APIs are enabled~~ Manage this through terraform.
 ```sh
 gcloud services enable cloudresourcemanager.googleapis.com
 gcloud services enable container.googleapis.com
@@ -27,6 +27,7 @@ gcloud services enable compute.googleapis.com
 gcloud services enable iam.googleapis.com
 gcloud services enable iamcredentials.googleapis.com
 gcloud services enable sts.googleapis.com
+gcloud services enable secretmanager.googleapis.com
 
 gcloud services list
 ```
@@ -70,6 +71,21 @@ gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
 gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
   --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/iam.serviceAccountUser"
+
+# Service Usage Admin – enable/disable GCP APIs via Terraform
+gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/serviceusage.serviceUsageAdmin"
+
+# Service Account Admin - manage service accounts and IAM policy bindings
+gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/iam.serviceAccountAdmin"
+
+# Project IAM Admin - allow creating project-level IAM policy bindings
+gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/resourcemanager.projectIamAdmin"
 ```
 
 3. Create a Workload Identity Pool
@@ -149,4 +165,9 @@ gcloud iam service-accounts get-iam-policy $SA_EMAIL \
   --project=${GOOGLE_PROJECT}
 
 gcloud storage buckets get-iam-policy gs://$BUCKET
+```
+
+**Get credentials**
+```sh
+gcloud container clusters get-credentials "${GOOGLE_PROJECT}-gke" --region $LOCATION --project $GOOGLE_PROJECT
 ```

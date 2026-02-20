@@ -1,0 +1,7 @@
+external-secrets:
+  external-secrets:
+  serviceAccount:
+    create: true
+    name: external-secrets-sa
+    annotations:
+      iam.gke.io/gcp-service-account: external-secrets-sa@alexk8s-test-proj.iam.gserviceaccount.com

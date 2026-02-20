@@ -1,5 +1,5 @@
 clusterName: alexk8s-test-proj-cluster
-clusterLocation: us-central1
+clusterLocation: europe-north2
 
 external-secrets:
   serviceAccount:

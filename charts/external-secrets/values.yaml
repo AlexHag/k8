@@ -1,4 +1,4 @@
-clusterName: alexk8s-test-proj-cluster
+clusterName: alexk8s-test-proj-gke
 clusterLocation: europe-north2
 
 external-secrets:

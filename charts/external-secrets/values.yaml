@@ -1,3 +1,6 @@
+clusterName: alexk8s-test-proj-cluster
+clusterLocation: us-central1
+
 external-secrets:
   serviceAccount:
     create: true

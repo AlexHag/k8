@@ -1,6 +1,6 @@
 argo-cd:
   dex:
-    enabled: false
+    enabled: true
   notifications:
     enabled: false
   applicationSet:
@@ -8,27 +8,27 @@ argo-cd:
   server:
     extraArgs:
       - --insecure
-  
-  # configs:
-  #   cm:
-  #     url: https://argocd.patchdb.se
-  #     dex.config: |
-  #       connectors:
-  #         - config:
-  #             issuer: https://accounts.google.com
-  #             clientID: 887433635495-15fkr6p1qbjhomviud1q7d9mfqj8qhg1.apps.googleusercontent.com
-  #             clientSecret: $argocd-google-oauth:client-secret
-  #             redirectURI: https://argocd.patchdb.se/api/dex/callback
-  #             scopes:
-  #               - openid
-  #               - profile
-  #               - email
-  #           type: oidc
-  #           id: google
-  #           name: Google
 
-  #   rbac:
-  #     policy.csv: |
-  #       g, alex.hagdahl.jobb@gmail.com, role:admin
-  #     policy.default: role:readonly
-  #     scopes: "[email]"
+  configs:
+    cm:
+      url: https://argocd.patchdb.se
+      dex.config: |
+        connectors:
+          - type: oidc
+            id: google
+            name: Google
+            config:
+              issuer: https://accounts.google.com
+              clientID: $argocd-google-oauth:client-id
+              clientSecret: $argocd-google-oauth:client-secret
+              redirectURI: https://argocd.patchdb.se/api/dex/callback
+              scopes:
+                - openid
+                - profile
+                - email
+
+    rbac:
+      policy.csv: |
+        g, alex.hagdahl.jobb@gmail.com, role:admin
+      policy.default: role:readonly
+      scopes: "[email]"

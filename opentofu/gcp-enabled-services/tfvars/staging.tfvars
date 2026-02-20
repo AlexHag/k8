@@ -7,5 +7,7 @@ enabled_services = [
   "cloudresourcemanager.googleapis.com",
   "container.googleapis.com",
   "compute.googleapis.com",
-  "secretmanager.googleapis.com"
+  "secretmanager.googleapis.com",
+  "artifactregistry.googleapis.com",
+  "iap.googleapis.com"
 ]

@@ -1,5 +1,4 @@
 external-secrets:
-  external-secrets:
   serviceAccount:
     create: true
     name: external-secrets-sa

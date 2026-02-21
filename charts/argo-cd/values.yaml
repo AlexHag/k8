@@ -30,5 +30,5 @@ argo-cd:
     rbac:
       policy.csv: |
         g, alex.hagdahl.jobb@gmail.com, role:admin
-      policy.default: role:readonly
+      policy.default: role:none
       scopes: "[email]"

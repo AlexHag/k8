@@ -86,6 +86,10 @@ gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
 gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
   --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/resourcemanager.projectIamAdmin"
+
+gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/artifactregistry.admin"
 ```
 
 3. Create a Workload Identity Pool

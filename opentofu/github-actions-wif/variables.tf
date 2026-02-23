@@ -42,6 +42,7 @@ variable "sa_project_roles" {
     "roles/iam.serviceAccountAdmin",
     "roles/resourcemanager.projectIamAdmin",
     "roles/iam.workloadIdentityPoolAdmin",
+    "roles/artifactregistry.admin"
   ]
 }
 

@@ -25,5 +25,5 @@ resource "google_artifact_registry_repository_iam_member" "runtime_reader" {
   repository = google_artifact_registry_repository.docker.name
   project    = var.project_id
   role       = "roles/artifactregistry.reader"
-  member = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+  member     = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
 }

@@ -5,7 +5,7 @@ data "google_project" "current" {
 
 # Google Secret Manager Accessor Service Account for GKE
 resource "google_service_account" "ci_builder" {
-  account_id   = "github-actions-artifacts-ci-builder"
+  account_id   = "artifacts-ci-builder"
   display_name = "GitHub Actions Artifact Registry CI Builder"
   project      = var.project_id
 }

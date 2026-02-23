@@ -168,6 +168,13 @@ gcloud storage buckets get-iam-policy gs://$BUCKET
 ```
 
 **Get credentials**
+
+Install the gke-gcloud-auth-plugin, which is needed for to use of kubectl
+```sh
+gcloud components install gke-gcloud-auth-plugin
+```
+
+Get credentials
 ```sh
 gcloud container clusters get-credentials "${GOOGLE_PROJECT}-gke" --region $LOCATION --project $GOOGLE_PROJECT
 ```

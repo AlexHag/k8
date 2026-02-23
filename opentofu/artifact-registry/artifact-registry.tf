@@ -25,9 +25,3 @@ resource "google_artifact_registry_repository" "docker" {
 
   project = var.project_id
 }
-
-# resource "google_artifact_registry_repository_iam_member" "ci_writer" {
-#   repository = google_artifact_registry_repository.docker.name
-#   role       = "roles/artifactregistry.writer"
-#   member     = "serviceAccount:${var.ci_service_account_email}"
-# }

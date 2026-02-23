@@ -19,16 +19,13 @@ spec:
       - name: harbor-regcred
       containers:
       - name: my-py-app
-        image: harbor.patchdb.se/apps/my-py-app:0.5.0
+        image: europe-north2-docker.pkg.dev/alexk8s-test-proj/application-images/my-py-app:latest
         ports:
         - containerPort: 8000
           name: http
         env:
           - name: DB_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: mssql-sa-password
-                key: MSSQL_SA_PASSWORD
+            value: "TempPasswordToChange123!"
         readinessProbe:
           httpGet:
             path: /

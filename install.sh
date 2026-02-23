@@ -107,6 +107,12 @@ helm dep update charts/argo-cd/
 helm install argo-cd charts/argo-cd/ -n argocd --create-namespace
 
 # MANUAL STEP - Configure sealed serets before applying root-app
+# Install kubeseal CLI:
+KUBESEAL_VERSION='0.34.0' # Set this to, for example, KUBESEAL_VERSION='0.34.0'
+curl -OL "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION:?}/kubeseal-${KUBESEAL_VERSION:?}-linux-amd64.tar.gz"
+tar -xvzf kubeseal-${KUBESEAL_VERSION:?}-linux-amd64.tar.gz kubeseal
+sudo install -m 755 kubeseal /usr/local/bin/kubeseal
+
 # Get the certificate
 # kubectl get secret -n kube-system sealed-secrets-key-XXXX -o yaml > sealed-secrets-key.yaml
 # Copy the certificate to the machine and create the secret
@@ -120,3 +126,6 @@ helm install argo-cd charts/argo-cd/ -n argocd --create-namespace
 
 # Install root-app (which will deploy sealed-secrets and all other apps)
 helm template charts/root-app/ | kubectl apply -f -
+
+# Get initial admin password for ArgoCD
+kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 -d

@@ -1,0 +1,15 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: envoy-proxy-lb
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        name: envoy-proxy-lb
+      envoyService:
+        name: envoy-proxy-lb
+        type: LoadBalancer
+        loadBalancerIP: "34.51.150.110"

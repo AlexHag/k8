@@ -1,0 +1,12 @@
+projectId: alexk8s-test-proj
+
+cert-manager:
+  installCRDs: true
+  global:
+    leaderElection:
+      namespace: cert-manager
+  serviceAccount:
+    create: true
+    name: cert-manager
+    annotations:
+      iam.gke.io/gcp-service-account: cert-manager-sa@alexk8s-test-proj.iam.gserviceaccount.com

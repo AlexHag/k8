@@ -1,26 +1,25 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: langfuse
+  name: cert-manager
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
   finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
     repoURL: https://github.com/AlexHag/k8.git
-    path: charts/langfuse/
+    path: charts/cert-manager/
     targetRevision: HEAD
     helm:
-      releaseName: langfuse
+      releaseName: cert-manager
   destination:
     server: https://kubernetes.default.svc
-    namespace: langfuse
+    namespace: cert-manager
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    automated: {}
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-

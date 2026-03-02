@@ -13,12 +13,15 @@ spec:
     targetRevision: HEAD
     helm:
       releaseName: envoy-gateway
+      skipCrds: true
+      parameters:
+        - name: gateway-helm.installCRDs
+          value: "false"
   destination:
     server: https://kubernetes.default.svc
     namespace: envoy-gateway-system
   syncPolicy:
-    automated:
-      selfHeal: true
+    automated: {}
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

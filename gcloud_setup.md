@@ -87,9 +87,15 @@ gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
   --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/resourcemanager.projectIamAdmin"
 
+# Artifact Registry Admin - Create an manage artifact registry repository
 gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
   --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/artifactregistry.admin"
+
+# DNS Admin - To manage DNS zones for GKE envoy gateway LB
+gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/dns.admin"
 ```
 
 3. Create a Workload Identity Pool
@@ -150,11 +156,59 @@ gcloud storage buckets update "gs://$BUCKET" --versioning
 gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" \
   --member="serviceAccount:$SA_EMAIL" \
   --role="roles/storage.objectAdmin"
+```
 
-# Probably not needed if storage admin is added
-gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" \
-  --member="serviceAccount:$SA_EMAIL" \
-  --role="roles/storage.legacyBucketReader"
+## Get kubernetes credentials
+
+1. [Install kubectl](https://kubernetes.io/docs/tasks/tools/)
+
+2. Install the gke-gcloud-auth-plugin, which is needed for to use of kubectl
+```sh
+gcloud components install gke-gcloud-auth-plugin
+```
+
+3. Get credentials
+```sh
+gcloud container clusters get-credentials "${GOOGLE_PROJECT}-gke" --region $LOCATION --project $GOOGLE_PROJECT
+```
+
+## Setup initial ArgoCD and root-app
+
+1. [Install Helm](https://helm.sh/docs/intro/install/)
+
+2. Add ArgoCD helm repository
+```sh
+helm repo add argo-cd https://argoproj.github.io/argo-helm
+```
+
+3. Update deps
+```sh
+helm dep update charts/argo-cd/
+```
+
+4. Install ArgoCD
+```sh
+helm install argo-cd charts/argo-cd/ -n argocd --create-namespace
+```
+
+5. Install the root-app
+```sh
+helm template charts/root-app/ | kubectl apply -f -
+```
+
+## Configure domain
+
+1. Get the name servers of the [dns zone](opentofu/dns/dns.tf)
+```sh
+gcloud dns managed-zones describe gke-dns-zone --format="value(nameServers)"
+```
+or
+```sh
+gcloud dns managed-zones describe gke-dns-zone --format="table(nameServers)"
+```
+or
+```sh
+tofu state show google_dns_managed_zone.main
 ```
 
 ---

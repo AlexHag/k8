@@ -8,7 +8,7 @@ terraform {
 
   backend "gcs" {
     bucket = "${var.project_id}-tfstate"
-    prefix = "terraform/state/gke"
+    prefix = "terraform/state/dns"
   }
 
   required_version = ">= 1.9.0"

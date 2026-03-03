@@ -9,5 +9,6 @@ enabled_services = [
   "compute.googleapis.com",
   "secretmanager.googleapis.com",
   "artifactregistry.googleapis.com",
-  "iap.googleapis.com"
+  "iap.googleapis.com",
+  "sqladmin.googleapis.com"
 ]

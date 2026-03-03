@@ -1,3 +1,5 @@
+bootstrapMode: false
+
 argo-cd:
   fullnameOverride: argocd
   dex:

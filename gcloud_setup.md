@@ -179,6 +179,7 @@ gcloud container clusters get-credentials "${GOOGLE_PROJECT}-gke" --region $LOCA
 2. Add ArgoCD helm repository
 ```sh
 helm repo add argo-cd https://argoproj.github.io/argo-helm
+helm repo update
 ```
 
 3. Update deps
@@ -188,8 +189,10 @@ helm dep update charts/argo-cd/
 
 4. Install ArgoCD
 ```sh
-helm install argo-cd charts/argo-cd/ -n argocd --create-namespace
+helm install argo-cd charts/argo-cd/ -n argocd --create-namespace --set bootstrapMode=true
 ```
+
+**Wait for ArgoCD sever to be ready**
 
 5. Install the root-app
 ```sh

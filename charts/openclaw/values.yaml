@@ -115,7 +115,10 @@ config:
         // - CIDR notation is NOT supported - list each proxy IP individually
         // - IPv6 exact addresses may work but are untested
         // - Recommend single-stack IPv4 deployments for simplicity
-        "trustedProxies": ["10.0.0.1"]
+        "trustedProxies": ["10.0.0.1"],
+        "controlUi": {
+          "dangerouslyAllowHostHeaderOriginFallback": true
+        }
       },
 
       // Browser configuration (Chromium sidecar)

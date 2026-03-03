@@ -130,13 +130,21 @@ config:
         }
       },
 
+      "auth": {
+       "profiles": {
+          "openai:default": {
+            "provider": "openai",
+            "mode": "api_key"
+          }
+        }
+      },
+
       // Agent configuration
       "agents": {
         "defaults": {
           "workspace": "/home/node/.openclaw/workspace",
           "model": {
-            // Uses ANTHROPIC_API_KEY from environment
-            "primary": "anthropic/claude-opus-4-6"
+            "primary": "openai/gpt-5.2"
           },
           "userTimezone": "UTC",
           "timeoutSeconds": 600,

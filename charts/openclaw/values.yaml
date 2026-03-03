@@ -214,10 +214,10 @@ persistence:
   enabled: true
   accessMode: ReadWriteOnce
   size: 5Gi
+  # -- Storage class (leave empty for default)
+  storageClass: "standard"
   # -- Specify an existing PVC to use
   # existingClaim: ""
-  # -- Storage class (leave empty for default)
-  # storageClass: ""
 
 # -- HTTPRoute configuration (Gateway API / Envoy Gateway)
 httpRoute:

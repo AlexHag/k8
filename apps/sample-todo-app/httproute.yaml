@@ -5,8 +5,11 @@ metadata:
   namespace: default
 spec:
   parentRefs:
-  - name: envoy-gateway
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: envoy-gateway
     namespace: envoy-gateway-system
+    sectionName: https
   hostnames:
   - sample-todo-app.patchdb.se
   rules:
@@ -14,6 +17,15 @@ spec:
     - path:
         type: PathPrefix
         value: /
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        set:
+        - name: X-Forwarded-Proto
+          value: https
     backendRefs:
-    - name: sample-todo-app-service
+    - group: ""
+      kind: Service
+      name: sample-todo-app-service
       port: 80
+      weight: 1

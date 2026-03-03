@@ -238,3 +238,6 @@ externalSecret:
     - secretKey: OPENAI_API_KEY
       remoteRef:
         key: openai-api-key
+    - secretKey: OPENCLAW_GATEWAY_TOKEN
+      remoteRef:
+        key: openclaw-gateway-token

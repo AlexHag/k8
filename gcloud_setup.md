@@ -96,6 +96,16 @@ gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
 gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
   --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/dns.admin"
+
+# Secret Manager Admin - To create secrets
+gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/secretmanager.admin"
+
+# Cloud SQL Admin - To provision Cloud SQL instances and databases
+gcloud projects add-iam-policy-binding $GOOGLE_PROJECT \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/cloudsql.admin"
 ```
 
 3. Create a Workload Identity Pool

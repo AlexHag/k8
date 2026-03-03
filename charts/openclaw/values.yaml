@@ -1,0 +1,275 @@
+# OpenClaw Helm Chart Values
+#
+# IMPORTANT ARCHITECTURE NOTES:
+# - OpenClaw is NOT horizontally scalable
+# - Deploy as a SINGLE INSTANCE only
+# - Do NOT increase replica count
+
+# -- Override the chart name
+nameOverride: "openclaw"
+# -- Override the full resource name
+fullnameOverride: "openclaw"
+
+# -- OpenClaw image version (used by all OpenClaw containers)
+openclawVersion: "2026.3.2"
+# -- Chromium sidecar image version
+chromiumVersion: "146.0.7680.31"
+# -- Config mode: `merge` preserves runtime changes, `overwrite` for strict GitOps
+configMode: merge
+
+# -- Number of replicas (must be 1, OpenClaw doesn't support horizontal scaling)
+replicaCount: 1
+# -- Deployment strategy
+strategy: Recreate
+
+# -- Main OpenClaw container image
+image:
+  repository: ghcr.io/openclaw/openclaw
+  # -- Defaults to openclawVersion if not set
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# -- Pod security context
+podSecurityContext:
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+
+# -- Main container security context
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# -- Main container resource requests and limits
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+
+# Reference a secret containing environment variables (e.g., API keys)
+# Create this secret manually or via external-secrets/vault-operator
+# Example:
+# - secretRef:
+#     name: openclaw-env-secret
+envFrom: []
+
+# Extra environment variables for the main container
+# Example:
+#   PATH: /home/node/.openclaw/pnpm:/home/node/.openclaw/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+#   PNPM_HOME: /home/node/.openclaw/pnpm
+env: {}
+
+# -- Chromium sidecar for browser automation (CDP on port 9222)
+chromium:
+  # -- Enable/disable the Chromium browser sidecar
+  enabled: true
+  image:
+    repository: chromedp/headless-shell
+    # -- Defaults to chromiumVersion if not set
+    tag: ""
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+# -- Service configuration
+service:
+  type: ClusterIP
+  port: 18789
+  ipFamilyPolicy: SingleStack
+  ipFamilies:
+    - IPv4
+
+# -- OpenClaw configuration files
+config:
+  # -- Shell alias for interactive sessions (sourced by ~/.bashrc)
+  bashAliases: |
+    alias openclaw='node /app/dist/index.js'
+  # -- OpenClaw configuration - JSON5 format
+  # Sensitive values use ${ENV_VAR} substitution from environment secret
+  openclawJson: |
+    {
+      // Gateway configuration
+      "gateway": {
+        "port": 18789,
+        "mode": "local",
+        // IMPORTANT: trustedProxies uses exact IP matching only
+        // - CIDR notation is NOT supported - list each proxy IP individually
+        // - IPv6 exact addresses may work but are untested
+        // - Recommend single-stack IPv4 deployments for simplicity
+        "trustedProxies": ["10.0.0.1"]
+      },
+
+      // Browser configuration (Chromium sidecar)
+      "browser": {
+        "enabled": true,
+        "defaultProfile": "default",
+        "profiles": {
+          "default": {
+            "cdpUrl": "http://localhost:9222",
+            "color": "#4285F4"
+          }
+        }
+      },
+
+      // Agent configuration
+      "agents": {
+        "defaults": {
+          "workspace": "/home/node/.openclaw/workspace",
+          "model": {
+            // Uses ANTHROPIC_API_KEY from environment
+            "primary": "anthropic/claude-opus-4-6"
+          },
+          "userTimezone": "UTC",
+          "timeoutSeconds": 600,
+          "maxConcurrent": 1
+        },
+        "list": [
+          {
+            "id": "main",
+            "default": true,
+            "identity": {
+              "name": "OpenClaw",
+              "emoji": "🦞"
+            }
+          }
+        ]
+      },
+
+      // Session management
+      "session": {
+        "scope": "per-sender",
+        "store": "/home/node/.openclaw/sessions",
+        "reset": {
+          "mode": "idle",
+          "idleMinutes": 60
+        }
+      },
+
+      // Logging
+      "logging": {
+        "level": "info",
+        "consoleLevel": "info",
+        "consoleStyle": "compact",
+        "redactSensitive": "tools"
+      },
+
+      // Tools configuration
+      "tools": {
+        "profile": "full",
+        "web": {
+          "search": {
+            "enabled": false
+          },
+          "fetch": {
+            "enabled": true
+          }
+        }
+      }
+
+      // Channel configuration can be added here:
+      // "channels": {
+      //   "telegram": {
+      //     "botToken": "${TELEGRAM_BOT_TOKEN}",
+      //     "enabled": true
+      //   },
+      //   "discord": {
+      //     "token": "${DISCORD_BOT_TOKEN}"
+      //   },
+      //   "slack": {
+      //     "botToken": "${SLACK_BOT_TOKEN}",
+      //     "appToken": "${SLACK_APP_TOKEN}"
+      //   }
+      // }
+    }
+
+# -- Persistence for OpenClaw data directory
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 5Gi
+  # -- Specify an existing PVC to use
+  # existingClaim: ""
+  # -- Storage class (leave empty for default)
+  # storageClass: ""
+
+# -- Ingress configuration
+ingress:
+  enabled: false
+  # className: nginx
+  # annotations:
+  #   cert-manager.io/cluster-issuer: "your-issuer"
+  #   nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  #   nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+  #   nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  # tls:
+  #   - secretName: openclaw-tls
+  #     hosts:
+  #       - openclaw.example.com
+  # hosts:
+  #   - host: openclaw.example.com
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+
+# -- Network policy configuration
+# Requires a CNI that supports NetworkPolicy (Calico, Cilium, Weave).
+# When enabled, ALL traffic is denied by default. You must
+# explicitly allow required traffic via ingress/egress rules.
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: gateway-system
+      ports:
+        - protocol: TCP
+          port: 18789
+  egress:
+    # DNS resolution (kube-dns/coredns)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # External internet (API providers, package registries, etc.)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 100.64.0.0/10

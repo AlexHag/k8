@@ -36,13 +36,15 @@ variable "sa_project_roles" {
   type        = list(string)
   default = [
     "roles/container.admin",
+    "roles/cloudsql.admin",
     "roles/compute.networkAdmin",
     "roles/iam.serviceAccountUser",
     "roles/serviceusage.serviceUsageAdmin",
     "roles/iam.serviceAccountAdmin",
     "roles/resourcemanager.projectIamAdmin",
     "roles/iam.workloadIdentityPoolAdmin",
-    "roles/artifactregistry.admin"
+    "roles/artifactregistry.admin",
+    "roles/secretmanager.admin"
   ]
 }
 

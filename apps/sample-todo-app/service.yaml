@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: my-py-app-service
+  name: sample-todo-app-service
   namespace: default
   labels:
-    app: my-py-app
+    app: sample-todo-app
 spec:
   selector:
-    app: my-py-app
+    app: sample-todo-app
   ports:
   - port: 80
     targetPort: 8000

@@ -24,3 +24,11 @@ resource "google_dns_record_set" "app" {
   managed_zone = google_dns_managed_zone.main.name
   rrdatas      = [google_compute_address.envoy_gateway_lb.address]
 }
+
+resource "google_dns_record_set" "sample-todo-app" {
+  name         = "sample-todo-app.${var.fully_qualified_domain_name}"
+  type         = "A"
+  ttl          = 300
+  managed_zone = google_dns_managed_zone.main.name
+  rrdatas      = [google_compute_address.envoy_gateway_lb.address]
+}

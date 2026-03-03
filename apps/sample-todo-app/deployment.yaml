@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-todo-app
+  namespace: default
+  labels:
+    app: sample-todo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sample-todo-app
+  template:
+    metadata:
+      labels:
+        app: sample-todo-app
+    spec:
+      serviceAccountName: sample-todo-app
+      containers:
+      - name: sample-todo-app
+        image: europe-north2-docker.pkg.dev/alexk8s-test-proj/application-images/sample-todo-app:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+          - name: DB_HOST
+            value: "127.0.0.1"
+          - name: DB_PORT
+            value: "5432"
+          - name: DB_NAME
+            value: "my_py_app"
+          - name: DB_USER
+            value: "my_py_app_user"
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: sample-todo-app-db
+                key: DB_PASSWORD
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 20
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.15.2
+        args:
+          - "--structured-logs"
+          - "--port=5432"
+          - "alexk8s-test-proj:europe-north2:sample-todo-app-pg"

@@ -1,12 +1,12 @@
-name: Build and Push my-py-app
+name: Build and Push sample-todo-app
 
 on:
   push:
     branches:
       - master
     paths:
-      - my-py-app/**
-      - .github/workflows/build-and-push-my-py-app.yml
+      - sample-todo-app/**
+      - .github/workflows/build-and-push-sample-todo-app.yml
   workflow_dispatch:
 
 permissions:
@@ -17,7 +17,7 @@ env:
   PROJECT_ID: alexk8s-test-proj
   REGION: europe-north2
   ARTIFACT_REGISTRY_REPOSITORY: application-images
-  IMAGE_NAME: my-py-app
+  IMAGE_NAME: sample-todo-app
   GCP_WORKLOAD_IDENTITY_PROVIDER: projects/615822691944/locations/global/workloadIdentityPools/github/providers/github
   GCP_SERVICE_ACCOUNT: artifacts-ci-builder@alexk8s-test-proj.iam.gserviceaccount.com
 
@@ -48,6 +48,6 @@ jobs:
         env:
           IMAGE_URI: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPOSITORY }}/${{ env.IMAGE_NAME }}
         run: |
-          docker build -f my-py-app/Dockerfile -t "$IMAGE_URI:${GITHUB_SHA}" -t "$IMAGE_URI:latest" my-py-app
+          docker build -f sample-todo-app/Dockerfile -t "$IMAGE_URI:${GITHUB_SHA}" -t "$IMAGE_URI:latest" sample-todo-app
           docker push "$IMAGE_URI:${GITHUB_SHA}"
           docker push "$IMAGE_URI:latest"

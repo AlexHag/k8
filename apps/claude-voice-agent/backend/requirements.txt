@@ -1,0 +1,9 @@
+flask
+flask-sock
+flask-cors
+openai
+gunicorn
+gevent
+gevent-websocket
+claude-agent-sdk
+alembic

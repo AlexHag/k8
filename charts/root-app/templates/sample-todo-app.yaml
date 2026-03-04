@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/AlexHag/k8.git
     targetRevision: HEAD
-    path: apps/sample-todo-app/
+    path: apps/sample-todo-app/.kubernetes
   destination:
     server: https://kubernetes.default.svc
     namespace: default

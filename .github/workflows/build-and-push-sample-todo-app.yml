@@ -1,12 +1,12 @@
 name: Build and Push sample-todo-app
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - sample-todo-app/**
-      - .github/workflows/build-and-push-sample-todo-app.yml
+  # push:
+  #   branches:
+  #     - master
+  #   paths:
+  #     - apps/sample-todo-app/src/**
+  #     - .github/workflows/build-and-push-sample-todo-app.yml
   workflow_dispatch:
 
 permissions:

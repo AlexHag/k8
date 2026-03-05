@@ -9,11 +9,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   useWebSocket,
   type AudioDelta,
+  type TextDelta,
   type ToolUseMessage,
   type ToolResultMessage,
 } from "../hooks/useWebSocket.ts";
 import { useAudioPlayer } from "../hooks/useAudioPlayer.ts";
-import { getSession, sendMessage, type SessionWithMessages } from "../api.ts";
+import { getSession, sendMessage, updateSession, type SessionWithMessages } from "../api.ts";
 
 interface ChatMessage {
   role: "user" | "assistant" | "error" | "tool_use" | "tool_result";
@@ -156,6 +157,7 @@ export function Chat() {
   );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showTools, setShowTools] = useState(true);
+  const [voiceMode, setVoiceMode] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -187,6 +189,7 @@ export function Chat() {
         const data = await getSession(sessionId);
         if (cancelled) return;
         setSessionData(data);
+        setVoiceMode(data.voice_mode);
 
         const loaded: ChatMessage[] = data.messages.map((m) => {
           if (m.role === "tool_use") {
@@ -252,6 +255,22 @@ export function Chat() {
     [playChunk],
   );
 
+  const onTextDelta = useCallback((delta: TextDelta) => {
+    setMessages((prev) => {
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last && last.role === "assistant") {
+        updated[updated.length - 1] = {
+          ...last,
+          text: last.text + delta.text,
+        };
+      } else {
+        updated.push({ role: "assistant", text: delta.text });
+      }
+      return updated;
+    });
+  }, []);
+
   const onToolUse = useCallback((msg: ToolUseMessage) => {
     setMessages((prev) => [
       ...prev,
@@ -288,6 +307,7 @@ export function Chat() {
   const { status } = useWebSocket({
     url: wsUrl,
     onAudioDelta,
+    onTextDelta,
     onToolUse,
     onToolResult,
     onDone,
@@ -299,8 +319,10 @@ export function Chat() {
     const text = input.trim();
     if (!text || isStreaming || status !== "connected" || !sessionId) return;
 
-    ensureContext();
-    resetAudio();
+    if (voiceMode) {
+      ensureContext();
+      resetAudio();
+    }
 
     setMessages((prev) => [
       ...prev,
@@ -442,6 +464,25 @@ export function Chat() {
 
       {/* Audio visualizer – always visible */}
       <AudioVisualizer analyserRef={analyserRef} onStop={handleStopAudio} />
+
+      <div className="voice-toggle-row">
+        <button
+          type="button"
+          className={`voice-toggle-btn ${voiceMode ? "active" : ""}`}
+          onClick={() => {
+            const next = !voiceMode;
+            setVoiceMode(next);
+            if (sessionId) {
+              updateSession(sessionId, { voice_mode: next }).catch(() =>
+                setVoiceMode(voiceMode),
+              );
+            }
+          }}
+          title={voiceMode ? "Disable voice mode" : "Enable voice mode"}
+        >
+          {voiceMode ? "[VOICE ON]" : "[VOICE OFF]"}
+        </button>
+      </div>
 
       <form className="chat-input-form" onSubmit={handleSubmit}>
         <span className="input-prompt">$</span>

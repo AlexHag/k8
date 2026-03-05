@@ -6,6 +6,7 @@ export interface SessionSummary {
   title: string;
   mode: "openai" | "claude_code";
   claude_session_id: string | null;
+  voice_mode: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -62,11 +63,11 @@ export function getSession(id: string): Promise<SessionWithMessages> {
 
 export function updateSession(
   id: string,
-  title: string,
+  fields: { title?: string; voice_mode?: boolean },
 ): Promise<SessionSummary> {
   return request<SessionSummary>(`/api/sessions/${id}`, {
     method: "PATCH",
-    body: JSON.stringify({ title }),
+    body: JSON.stringify(fields),
   });
 }
 

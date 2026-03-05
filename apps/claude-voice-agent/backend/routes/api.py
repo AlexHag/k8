@@ -26,6 +26,9 @@ def _handle_openai_background(
 ) -> None:
     """Run OpenAI streaming in a background thread, pushing audio to the WS."""
     try:
+        session = session_service.get_session(session_id)
+        voice_enabled = session.voice_mode if session else False
+
         existing_messages = session_service.get_messages(session_id)
         conversation_history: list[dict] = []
         for msg in existing_messages:
@@ -34,13 +37,18 @@ def _handle_openai_background(
                     {"role": msg.role, "content": msg.text}
                 )
 
-        response = openai_client.chat.completions.create(
+        create_kwargs: dict = dict(
             model=MODEL,
-            modalities=["text", "audio"],
-            audio={"voice": VOICE, "format": AUDIO_FORMAT},
             messages=conversation_history,
             stream=True,
         )
+        if voice_enabled:
+            create_kwargs["modalities"] = ["text", "audio"]
+            create_kwargs["audio"] = {"voice": VOICE, "format": AUDIO_FORMAT}
+        else:
+            create_kwargs["modalities"] = ["text"]
+
+        response = openai_client.chat.completions.create(**create_kwargs)
 
         full_transcript = ""
         ws = registry.get(session_id)
@@ -51,7 +59,7 @@ def _handle_openai_background(
 
             delta = chunk.choices[0].delta
 
-            if hasattr(delta, "audio") and delta.audio:
+            if voice_enabled and hasattr(delta, "audio") and delta.audio:
                 audio_data = delta.audio
                 payload: dict = {"type": "audio_delta"}
 
@@ -67,6 +75,15 @@ def _handle_openai_background(
                 if ws:
                     try:
                         ws_send(ws, payload)
+                    except WsClosed:
+                        logger.info("WS closed during OpenAI streaming for session %s", session_id)
+                        ws = None
+
+            elif not voice_enabled and hasattr(delta, "content") and delta.content:
+                full_transcript += delta.content
+                if ws:
+                    try:
+                        ws_send(ws, {"type": "text_delta", "text": delta.content})
                     except WsClosed:
                         logger.info("WS closed during OpenAI streaming for session %s", session_id)
                         ws = None
@@ -142,13 +159,18 @@ def register_api_routes(
     def update_session(session_id: str):
         data = request.get_json()
 
-        if not data or "title" not in data:
-            return jsonify({"error": "title is required"}), 400
+        if not data or ("title" not in data and "voice_mode" not in data):
+            return jsonify({"error": "title or voice_mode is required"}), 400
 
-        session = session_service.update_session_title(session_id, data["title"])
-
+        session = session_service.get_session(session_id)
         if session is None:
             return jsonify({"error": "Not found"}), 404
+
+        if "title" in data:
+            session = session_service.update_session_title(session_id, data["title"])
+
+        if "voice_mode" in data:
+            session = session_service.update_voice_mode(session_id, bool(data["voice_mode"]))
 
         return jsonify(session.to_dict())
 

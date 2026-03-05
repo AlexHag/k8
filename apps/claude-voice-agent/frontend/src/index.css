@@ -472,6 +472,35 @@ body {
   }
 }
 
+/* --- Voice mode toggle --- */
+.voice-toggle-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 0;
+  flex-shrink: 0;
+}
+
+.voice-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--green-faint);
+  color: var(--green-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.voice-toggle-btn.active {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.voice-toggle-btn:hover {
+  background: rgba(0, 255, 65, 0.08);
+}
+
 /* --- Input form --- */
 .chat-input-form {
   display: flex;

@@ -53,6 +53,14 @@ class SessionService:
         session.claude_session_id = claude_sid
         return self._session_repo.update(session)
 
+    def update_voice_mode(self, session_id: str, enabled: bool) -> Session | None:
+        session = self._session_repo.get_by_id(session_id)
+        if session is None:
+            return None
+        session.voice_mode = enabled
+        session.updated_at = datetime.now(timezone.utc)
+        return self._session_repo.update(session)
+
     def update_status(self, session_id: str, status: str) -> Session | None:
         session = self._session_repo.get_by_id(session_id)
         if session is None:

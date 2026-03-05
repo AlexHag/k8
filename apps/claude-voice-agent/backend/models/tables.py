@@ -17,6 +17,7 @@ sessions_table = sa.Table(
     sa.Column("mode", sa.Text, nullable=False),
     sa.Column("claude_session_id", sa.Text, nullable=True),
     sa.Column("status", sa.Text, nullable=False, server_default="idle"),
+    sa.Column("voice_mode", sa.Boolean, nullable=False, server_default=sa.false()),
     sa.Column(
         "created_at",
         sa.DateTime,

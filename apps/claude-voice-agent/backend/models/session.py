@@ -12,6 +12,7 @@ class Session:
     mode: str = "openai"
     claude_session_id: str | None = None
     status: str = "idle"
+    voice_mode: bool = False
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -22,6 +23,7 @@ class Session:
             "mode": self.mode,
             "claude_session_id": self.claude_session_id,
             "status": self.status,
+            "voice_mode": self.voice_mode,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }

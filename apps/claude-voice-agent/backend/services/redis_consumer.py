@@ -129,15 +129,25 @@ class BackendRedisConsumer:
                 text=event.text,
             )
             if ws:
+                session = self._session_service.get_session(session_id)
+                voice_enabled = session.voice_mode if session else False
                 try:
-                    logger.info(
-                        "[WS_FWD] session=%s type=text (TTS) text=%r",
-                        session_id,
-                        event.text[:200],
-                    )
-                    process_text_block(ws, event.text, self._openai)
+                    if voice_enabled:
+                        logger.info(
+                            "[WS_FWD] session=%s type=text (TTS) text=%r",
+                            session_id,
+                            event.text[:200],
+                        )
+                        process_text_block(ws, event.text, self._openai)
+                    else:
+                        logger.info(
+                            "[WS_FWD] session=%s type=text_delta text=%r",
+                            session_id,
+                            event.text[:200],
+                        )
+                        ws_send(ws, {"type": "text_delta", "text": event.text})
                 except WsClosed:
-                    logger.info("WS closed during TTS for session %s", session_id)
+                    logger.info("WS closed during text forward for session %s", session_id)
                     self._registry.unregister(session_id)
             else:
                 logger.info(

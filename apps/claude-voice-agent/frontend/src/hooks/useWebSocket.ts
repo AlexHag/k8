@@ -25,6 +25,11 @@ export interface DoneMessage {
   type: "done";
 }
 
+export interface TextDelta {
+  type: "text_delta";
+  text: string;
+}
+
 export interface ErrorMessage {
   type: "error";
   message: string;
@@ -32,6 +37,7 @@ export interface ErrorMessage {
 
 type ServerMessage =
   | AudioDelta
+  | TextDelta
   | ToolUseMessage
   | ToolResultMessage
   | DoneMessage
@@ -40,6 +46,7 @@ type ServerMessage =
 interface UseWebSocketOptions {
   url: string | null;
   onAudioDelta: (delta: AudioDelta) => void;
+  onTextDelta: (delta: TextDelta) => void;
   onToolUse: (msg: ToolUseMessage) => void;
   onToolResult: (msg: ToolResultMessage) => void;
   onDone: () => void;
@@ -49,6 +56,7 @@ interface UseWebSocketOptions {
 export function useWebSocket({
   url,
   onAudioDelta,
+  onTextDelta,
   onToolUse,
   onToolResult,
   onDone,
@@ -57,6 +65,7 @@ export function useWebSocket({
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const callbacksRef = useRef({
     onAudioDelta,
+    onTextDelta,
     onToolUse,
     onToolResult,
     onDone,
@@ -64,6 +73,7 @@ export function useWebSocket({
   });
   callbacksRef.current = {
     onAudioDelta,
+    onTextDelta,
     onToolUse,
     onToolResult,
     onDone,
@@ -85,6 +95,9 @@ export function useWebSocket({
       switch (msg.type) {
         case "audio_delta":
           callbacksRef.current.onAudioDelta(msg);
+          break;
+        case "text_delta":
+          callbacksRef.current.onTextDelta(msg);
           break;
         case "tool_use":
           callbacksRef.current.onToolUse(msg);

@@ -58,8 +58,8 @@ def create_app() -> Flask:
     def shutdown_session(exception=None):
         db_session.remove()
 
-    register_api_routes(app, session_service)
-    register_ws_routes(sock, session_service, redis_client, registry)
+    register_api_routes(app, session_service, redis_client, registry, openai_client)
+    register_ws_routes(sock, session_service, registry)
 
     return app
 

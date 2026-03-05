@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
@@ -54,7 +54,6 @@ export function useWebSocket({
   onDone,
   onError,
 }: UseWebSocketOptions) {
-  const wsRef = useRef<WebSocket | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const callbacksRef = useRef({
     onAudioDelta,
@@ -78,7 +77,6 @@ export function useWebSocket({
     }
 
     const ws = new WebSocket(url);
-    wsRef.current = ws;
 
     ws.onopen = () => setStatus("connected");
 
@@ -113,12 +111,5 @@ export function useWebSocket({
     };
   }, [url]);
 
-  const send = useCallback((text: string, mode: string = "openai") => {
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "message", text, mode }));
-    }
-  }, []);
-
-  return { send, status };
+  return { status };
 }

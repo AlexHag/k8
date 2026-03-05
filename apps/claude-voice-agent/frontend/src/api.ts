@@ -73,3 +73,18 @@ export function updateSession(
 export function deleteSession(id: string): Promise<void> {
   return request<void>(`/api/sessions/${id}`, { method: "DELETE" });
 }
+
+export interface SendMessageResponse {
+  message_id: string;
+  session: SessionSummary;
+}
+
+export function sendMessage(
+  sessionId: string,
+  text: string,
+): Promise<SendMessageResponse> {
+  return request<SendMessageResponse>(`/api/sessions/${sessionId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+}

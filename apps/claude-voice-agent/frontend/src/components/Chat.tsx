@@ -13,7 +13,7 @@ import {
   type ToolResultMessage,
 } from "../hooks/useWebSocket.ts";
 import { useAudioPlayer } from "../hooks/useAudioPlayer.ts";
-import { getSession, type SessionWithMessages } from "../api.ts";
+import { getSession, sendMessage, type SessionWithMessages } from "../api.ts";
 
 interface ChatMessage {
   role: "user" | "assistant" | "error" | "tool_use" | "tool_result";
@@ -285,7 +285,7 @@ export function Chat() {
     setIsStreaming(false);
   }, []);
 
-  const { send, status } = useWebSocket({
+  const { status } = useWebSocket({
     url: wsUrl,
     onAudioDelta,
     onToolUse,
@@ -294,10 +294,10 @@ export function Chat() {
     onError,
   });
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const text = input.trim();
-    if (!text || isStreaming || status !== "connected") return;
+    if (!text || isStreaming || status !== "connected" || !sessionId) return;
 
     ensureContext();
     resetAudio();
@@ -309,7 +309,15 @@ export function Chat() {
     ]);
     setInput("");
     setIsStreaming(true);
-    send(text, mode);
+
+    try {
+      await sendMessage(sessionId, text);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to send message";
+      setMessages((prev) => [...prev, { role: "error", text: message }]);
+      setIsStreaming(false);
+    }
   };
 
   // Stop audio immediately and dismiss the visualizer

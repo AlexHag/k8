@@ -41,6 +41,11 @@ class AgentConsumer:
                 continue
 
             for entry_id, fields in entries:
+                logger.info(
+                    "[EVENT_IN] entry_id=%s raw_fields=%s",
+                    entry_id,
+                    fields,
+                )
                 try:
                     event = deserialize_prompt_event(fields)
                     await self._handle_event(event)
@@ -61,9 +66,10 @@ class AgentConsumer:
     async def _handle_event(self, event: PromptEvent | CancelEvent) -> None:
         if isinstance(event, PromptEvent):
             logger.info(
-                "Received prompt for session %s (claude_sid=%s)",
+                "[EVENT_IN] type=prompt session=%s claude_sid=%s prompt=%r",
                 event.session_id,
                 event.claude_session_id,
+                event.text[:300] if event.text else "",
             )
             task = asyncio.create_task(
                 run_claude_session(
@@ -77,10 +83,22 @@ class AgentConsumer:
             self._tasks[event.session_id] = task
 
         elif isinstance(event, CancelEvent):
-            logger.info("Received cancel for session %s", event.session_id)
+            logger.info(
+                "[EVENT_IN] type=cancel session=%s",
+                event.session_id,
+            )
             task = self._tasks.get(event.session_id)
             if task and not task.done():
                 task.cancel()
+                logger.info(
+                    "[EVENT_IN] cancel applied — task cancelled for session=%s",
+                    event.session_id,
+                )
+            else:
+                logger.info(
+                    "[EVENT_IN] cancel ignored — no active task for session=%s",
+                    event.session_id,
+                )
 
     def _cleanup_finished_tasks(self) -> None:
         finished = [

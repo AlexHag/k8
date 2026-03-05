@@ -139,19 +139,38 @@ def register_ws_routes(
             while True:
                 raw = ws.receive()
                 if raw is None:
+                    logger.info(
+                        "[WS_IN] session=%s received None (client disconnected)",
+                        session_id,
+                    )
                     break
 
                 msg = json.loads(raw)
+                logger.info(
+                    "[WS_IN] session=%s type=%s payload=%r",
+                    session_id,
+                    msg.get("type"),
+                    {k: (v[:200] if isinstance(v, str) else v) for k, v in msg.items()},
+                )
+
                 if msg.get("type") != "message":
+                    logger.info(
+                        "[WS_IN] session=%s ignoring non-message type=%s",
+                        session_id,
+                        msg.get("type"),
+                    )
                     continue
 
                 user_text = msg.get("text", "").strip()
                 if not user_text:
+                    logger.info(
+                        "[WS_IN] session=%s ignoring empty message text",
+                        session_id,
+                    )
                     continue
 
                 try:
                     if session.mode == "claude_code":
-                        # Save the user message immediately
                         user_msg = Message(
                             session_id=session_id,
                             role="user",
@@ -161,7 +180,6 @@ def register_ws_routes(
                         current_sequence += 1
                         session_service.save_message(user_msg)
 
-                        # Publish prompt to Redis for the agent to pick up
                         prompt_event = PromptEvent(
                             type="prompt",
                             session_id=session_id,
@@ -171,15 +189,15 @@ def register_ws_routes(
                         redis_client.publish(
                             PROMPT_STREAM, serialize_event(prompt_event)
                         )
+                        logger.info(
+                            "[WS_OUT] session=%s published prompt to Redis — text=%r claude_sid=%s",
+                            session_id,
+                            user_text[:200],
+                            claude_session_id,
+                        )
                         session_service.update_status(session_id, "running")
 
-                        # The response will arrive via the background Redis
-                        # consumer and be forwarded to this WS connection
-                        # through the connection registry. The WS stays open
-                        # and keeps listening for more user messages.
-
                     else:
-                        # OpenAI: handle entirely in-process
                         turn_messages: list[Message] = []
 
                         turn_messages.append(
@@ -192,8 +210,18 @@ def register_ws_routes(
                         )
                         current_sequence += 1
 
+                        logger.info(
+                            "[WS_OUT] session=%s sending to OpenAI — text=%r",
+                            session_id,
+                            user_text[:200],
+                        )
                         full_transcript = _handle_openai(
                             ws, user_text, conversation_history, openai_client
+                        )
+                        logger.info(
+                            "[WS_OUT] session=%s OpenAI response complete — transcript=%r",
+                            session_id,
+                            full_transcript[:200] if full_transcript else "",
                         )
 
                         turn_messages.append(

@@ -42,8 +42,8 @@ export function Home() {
   return (
     <div className="page-container">
       <div className="home-content">
-        <h1 className="home-title">AI VOICE AGENT</h1>
-        <p className="home-subtitle">&gt; Terminal-based voice interface</p>
+        <h1 className="home-title">Agent-M</h1>
+        <p className="home-subtitle">&gt; Multi Agent Orchestration Tool</p>
 
         {step === "idle" && (
           <div className="home-actions">

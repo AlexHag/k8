@@ -53,6 +53,7 @@ async def run_claude_session(
     )
 
     try:
+        # Message = UserMessage | AssistantMessage | SystemMessage | ResultMessage | StreamEvent
         async for message in claude_query(prompt=prompt, options=options):
             if isinstance(message, AssistantMessage):
                 logger.info(
@@ -154,10 +155,15 @@ async def run_claude_session(
                     )
 
             else:
-                logger.info(
-                    "[CLAUDE_RESPONSE] session=%s unknown_message_type=%s",
+                try:
+                    message_details = vars(message)
+                except TypeError:
+                    message_details = repr(message)
+                logger.warning(
+                    "[CLAUDE_RESPONSE] session=%s unknown_message_type=%s details=%s",
                     session_id,
                     type(message).__name__,
+                    message_details,
                 )
 
         done = DoneEvent(type="done", session_id=session_id)

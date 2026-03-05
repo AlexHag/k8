@@ -3,15 +3,15 @@ FROM python:3.12-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libpq-dev \
+    build-essential curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/requirements.txt .
+COPY agent/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY common/ ./common/
-COPY backend/ .
+COPY agent/ .
 
-EXPOSE 5000
+EXPOSE 8000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--worker-class", "gevent", "--workers", "1", "app:app"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

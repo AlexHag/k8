@@ -5,7 +5,8 @@ openai
 gunicorn
 gevent
 gevent-websocket
-claude-agent-sdk
 alembic
 sqlalchemy
 psycopg2
+redis
+python-dotenv

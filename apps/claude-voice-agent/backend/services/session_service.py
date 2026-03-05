@@ -53,12 +53,23 @@ class SessionService:
         session.claude_session_id = claude_sid
         return self._session_repo.update(session)
 
+    def update_status(self, session_id: str, status: str) -> Session | None:
+        session = self._session_repo.get_by_id(session_id)
+        if session is None:
+            return None
+        session.status = status
+        session.updated_at = datetime.now(timezone.utc)
+        return self._session_repo.update(session)
+
     def delete_session(self, session_id: str) -> bool:
         self._message_repo.delete_by_session_id(session_id)
         return self._session_repo.delete(session_id)
 
     def get_messages(self, session_id: str) -> list[Message]:
         return self._message_repo.get_by_session_id(session_id)
+
+    def save_message(self, message: Message) -> Message:
+        return self._message_repo.create(message)
 
     def save_messages(self, messages: list[Message]) -> list[Message]:
         return self._message_repo.create_many(messages)

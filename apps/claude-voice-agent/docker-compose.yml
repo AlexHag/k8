@@ -9,16 +9,38 @@ services:
       - "5432:5432"
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "5000:5000"
     environment:
       - DB_TYPE=postgres
       - DATABASE_URL=postgresql://agent-m-user:agent-m-password@postgres:5432/agentm
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       - postgres
+      - redis
+    restart: unless-stopped
+
+  agent:
+    build:
+      context: .
+      dockerfile: agent/Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CLAUDE_CLI_PATH=/usr/local/bin/claude
+      - CLAUDE_CWD=/workspace
+    depends_on:
+      - redis
     restart: unless-stopped
 
   pgadmin:

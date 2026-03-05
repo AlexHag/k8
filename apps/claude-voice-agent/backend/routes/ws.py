@@ -1,258 +1,31 @@
 from __future__ import annotations
 
-import asyncio
-import base64
 import json
-import re
 import logging
-from concurrent.futures import ThreadPoolExecutor, Future
 
 from flask import request
 from flask_sock import Sock
 from openai import OpenAI
-from simple_websocket import ConnectionClosed
-
-from claude_agent_sdk import (
-    query as claude_query,
-    ClaudeAgentOptions,
-    AssistantMessage,
-    ResultMessage,
-    TextBlock,
-    ToolUseBlock,
-    ToolResultBlock,
-)
 
 from config import (
     OPENAI_API_KEY,
     MODEL,
     VOICE,
     AUDIO_FORMAT,
-    TTS_MODEL,
-    CLAUDE_CLI_PATH,
-    CLAUDE_CWD,
 )
+from common.constants import PROMPT_STREAM
+from common.events import PromptEvent, serialize_event
+from common.redis_streams import RedisStreamClient
 from models.message import Message
 from services.session_service import SessionService
+from services.redis_consumer import ConnectionRegistry
+from services.tts import WsClosed, ws_send
 
 logger = logging.getLogger(__name__)
 
-SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
-
 
 # ---------------------------------------------------------------------------
-# Sentinel raised when the WebSocket has closed so callers can react without
-# letting a raw ConnectionClosed bubble into anyio's internals.
-# ---------------------------------------------------------------------------
-
-class _WsClosed(Exception):
-    """The WebSocket connection was closed while we were streaming."""
-
-
-def _send(ws, payload: dict) -> None:
-    """Send a JSON payload; converts ConnectionClosed → _WsClosed."""
-    try:
-        ws.send(json.dumps(payload))
-    except ConnectionClosed:
-        raise _WsClosed()
-
-
-# ---------------------------------------------------------------------------
-# TTS helpers
-# ---------------------------------------------------------------------------
-
-_TTS_EXECUTOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="tts")
-
-
-def _tts_fetch(text: str, openai_client: OpenAI) -> bytes:
-    """Fetch the full PCM audio for a sentence and return it as raw bytes."""
-    response = openai_client.audio.speech.create(
-        model=TTS_MODEL, voice=VOICE, input=text, response_format="pcm"
-    )
-    return response.read()
-
-
-def _process_text_block(ws, text: str, openai_client: OpenAI) -> None:
-    """Convert a text block to speech.
-
-    All per-sentence TTS requests are dispatched concurrently via a shared
-    thread-pool. Audio is then streamed to the client in sentence order so
-    playback remains coherent, while later sentences are already being fetched
-    in the background — reducing total latency from Σ(latencies) to
-    roughly max(latencies).
-
-    Raises _WsClosed if the connection drops mid-stream.
-    """
-    sentences = [s.strip() for s in SENTENCE_SPLIT_RE.split(text) if s.strip()]
-    if not sentences:
-        return
-
-    # Dispatch all TTS requests in parallel before waiting on any result.
-    futures: list[Future[bytes]] = [
-        _TTS_EXECUTOR.submit(_tts_fetch, sentence, openai_client)
-        for sentence in sentences
-    ]
-
-    # Stream audio in order — each future.result() blocks only until *that*
-    # sentence is ready, by which time later sentences are already in-flight.
-    for sentence, future in zip(sentences, futures):
-        _send(ws, {"type": "audio_delta", "transcript": sentence + " "})
-        audio_data = future.result()
-        for i in range(0, len(audio_data), 4096):
-            _send(
-                ws,
-                {
-                    "type": "audio_delta",
-                    "data": base64.b64encode(audio_data[i : i + 4096]).decode(),
-                },
-            )
-
-
-# ---------------------------------------------------------------------------
-# Claude async query
-# ---------------------------------------------------------------------------
-
-async def _run_claude_query(
-    user_text: str,
-    session_id: str | None,
-    ws,
-    openai_client: OpenAI,
-) -> tuple[str | None, list[dict]]:
-    """Run the Claude agent query, streaming results to *ws*.
-
-    Never lets _WsClosed propagate out of a _send call into anyio internals.
-    Instead it sets a flag and continues draining the generator so anyio can
-    clean up its cancel scopes normally.
-    """
-    options = ClaudeAgentOptions(
-        cli_path=CLAUDE_CLI_PATH,
-        permission_mode="acceptEdits",
-        cwd=CLAUDE_CWD,
-    )
-    if session_id:
-        options.resume = session_id
-
-    new_session_id = None
-    turn_messages: list[dict] = []
-    ws_closed = False  # once True we collect messages but stop sending
-
-    async for message in claude_query(prompt=user_text, options=options):
-        if isinstance(message, AssistantMessage):
-            for block in message.content:
-                if isinstance(block, TextBlock):
-                    if not ws_closed:
-                        try:
-                            _process_text_block(ws, block.text, openai_client)
-                        except _WsClosed:
-                            ws_closed = True
-                            logger.info("WebSocket closed during TTS streaming")
-                    turn_messages.append({"role": "assistant", "text": block.text})
-
-                elif isinstance(block, ToolUseBlock):
-                    if not ws_closed:
-                        try:
-                            _send(
-                                ws,
-                                {
-                                    "type": "tool_use",
-                                    "tool": block.name,
-                                    "input": block.input,
-                                },
-                            )
-                        except _WsClosed:
-                            ws_closed = True
-                    turn_messages.append(
-                        {
-                            "role": "tool_use",
-                            "text": json.dumps(block.input),
-                            "tool_name": block.name,
-                            "tool_input": json.dumps(block.input),
-                        }
-                    )
-
-                elif isinstance(block, ToolResultBlock):
-                    content = block.content
-                    if isinstance(content, list):
-                        content = "\n".join(
-                            (
-                                item.get("text", str(item))
-                                if isinstance(item, dict)
-                                else str(item)
-                            )
-                            for item in content
-                        )
-                    if not ws_closed:
-                        try:
-                            _send(
-                                ws,
-                                {
-                                    "type": "tool_result",
-                                    "tool_use_id": block.tool_use_id,
-                                    "content": str(content) if content else "",
-                                    "is_error": bool(block.is_error),
-                                },
-                            )
-                        except _WsClosed:
-                            ws_closed = True
-                    turn_messages.append(
-                        {
-                            "role": "tool_result",
-                            "text": str(content) if content else "",
-                            "is_error": bool(block.is_error),
-                        }
-                    )
-
-        elif isinstance(message, ResultMessage):
-            new_session_id = message.session_id
-
-    return new_session_id, turn_messages
-
-
-# ---------------------------------------------------------------------------
-# Thread executor for Claude queries
-#
-# Running asyncio.run() inside a gevent greenlet causes anyio's cancel scopes
-# to be entered in one asyncio task and exited in another (because gevent
-# monkey-patches asyncio).  The fix is to run the coroutine in a real OS
-# thread that has its own fresh, unpatched event loop.
-# ---------------------------------------------------------------------------
-
-_CLAUDE_EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="claude")
-
-
-def _run_claude_in_thread(
-    user_text: str,
-    session_id: str | None,
-    ws,
-    openai_client: OpenAI,
-) -> tuple[str | None, list[dict]]:
-    """Execute _run_claude_query in a dedicated OS thread with its own event loop.
-
-    This avoids the gevent monkey-patching conflict that causes:
-        RuntimeError: Attempted to exit cancel scope in a different task than
-        it was entered in
-    """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(
-            _run_claude_query(user_text, session_id, ws, openai_client)
-        )
-    finally:
-        # Cancel any leftover tasks so the loop can close cleanly.
-        try:
-            pending = asyncio.all_tasks(loop)
-            if pending:
-                for task in pending:
-                    task.cancel()
-                loop.run_until_complete(
-                    asyncio.gather(*pending, return_exceptions=True)
-                )
-        finally:
-            loop.close()
-
-
-# ---------------------------------------------------------------------------
-# OpenAI handler
+# OpenAI handler (unchanged -- stays in-process)
 # ---------------------------------------------------------------------------
 
 def _handle_openai(
@@ -298,16 +71,14 @@ def _handle_openai(
                 if audio_resp_id:
                     audio_id = audio_resp_id
 
-                _send(ws, payload)
-    except _WsClosed:
-        # Connection dropped mid-stream; return whatever we collected so it
-        # can still be persisted to the database.
+                ws_send(ws, payload)
+    except WsClosed:
         logger.info("WebSocket closed during OpenAI streaming")
         return full_transcript
 
     try:
-        _send(ws, {"type": "done"})
-    except _WsClosed:
+        ws_send(ws, {"type": "done"})
+    except WsClosed:
         pass
 
     if audio_id:
@@ -324,19 +95,24 @@ def _handle_openai(
 # WebSocket route
 # ---------------------------------------------------------------------------
 
-def register_ws_routes(sock: Sock, session_service: SessionService) -> None:
+def register_ws_routes(
+    sock: Sock,
+    session_service: SessionService,
+    redis_client: RedisStreamClient,
+    registry: ConnectionRegistry,
+) -> None:
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
     @sock.route("/ws")
     def websocket_handler(ws):
         session_id = request.args.get("session_id")
         if not session_id:
-            _send(ws, {"type": "error", "message": "session_id is required"})
+            ws_send(ws, {"type": "error", "message": "session_id is required"})
             return
 
         session = session_service.get_session(session_id)
         if not session:
-            _send(ws, {"type": "error", "message": "Session not found"})
+            ws_send(ws, {"type": "error", "message": "Session not found"})
             return
 
         existing_messages = session_service.get_messages(session_id)
@@ -351,6 +127,9 @@ def register_ws_routes(sock: Sock, session_service: SessionService) -> None:
 
         claude_session_id = session.claude_session_id
         current_sequence = session_service.get_next_sequence(session_id)
+
+        if session.mode == "claude_code":
+            registry.register(session_id, ws)
 
         logger.info(
             "WebSocket connected for session %s (mode=%s)", session_id, session.mode
@@ -370,55 +149,49 @@ def register_ws_routes(sock: Sock, session_service: SessionService) -> None:
                 if not user_text:
                     continue
 
-                turn_messages: list[Message] = []
-
                 try:
-                    turn_messages.append(
-                        Message(
+                    if session.mode == "claude_code":
+                        # Save the user message immediately
+                        user_msg = Message(
                             session_id=session_id,
                             role="user",
                             text=user_text,
                             sequence=current_sequence,
                         )
-                    )
-                    current_sequence += 1
+                        current_sequence += 1
+                        session_service.save_message(user_msg)
 
-                    if session.mode == "claude_code":
-                        future = _CLAUDE_EXECUTOR.submit(
-                            _run_claude_in_thread,
-                            user_text,
-                            claude_session_id,
-                            ws,
-                            openai_client,
+                        # Publish prompt to Redis for the agent to pick up
+                        prompt_event = PromptEvent(
+                            type="prompt",
+                            session_id=session_id,
+                            text=user_text,
+                            claude_session_id=claude_session_id,
                         )
-                        new_claude_sid, claude_turn_msgs = future.result()
+                        redis_client.publish(
+                            PROMPT_STREAM, serialize_event(prompt_event)
+                        )
+                        session_service.update_status(session_id, "running")
 
-                        if new_claude_sid:
-                            claude_session_id = new_claude_sid
-                            session_service.update_claude_session_id(
-                                session_id, claude_session_id
-                            )
-
-                        for tm in claude_turn_msgs:
-                            turn_messages.append(
-                                Message(
-                                    session_id=session_id,
-                                    role=tm["role"],
-                                    text=tm["text"],
-                                    tool_name=tm.get("tool_name"),
-                                    tool_input=tm.get("tool_input"),
-                                    is_error=tm.get("is_error", False),
-                                    sequence=current_sequence,
-                                )
-                            )
-                            current_sequence += 1
-
-                        try:
-                            _send(ws, {"type": "done"})
-                        except _WsClosed:
-                            pass
+                        # The response will arrive via the background Redis
+                        # consumer and be forwarded to this WS connection
+                        # through the connection registry. The WS stays open
+                        # and keeps listening for more user messages.
 
                     else:
+                        # OpenAI: handle entirely in-process
+                        turn_messages: list[Message] = []
+
+                        turn_messages.append(
+                            Message(
+                                session_id=session_id,
+                                role="user",
+                                text=user_text,
+                                sequence=current_sequence,
+                            )
+                        )
+                        current_sequence += 1
+
                         full_transcript = _handle_openai(
                             ws, user_text, conversation_history, openai_client
                         )
@@ -433,31 +206,24 @@ def register_ws_routes(sock: Sock, session_service: SessionService) -> None:
                         )
                         current_sequence += 1
 
-                except _WsClosed:
-                    # Client disconnected mid-turn; fall through to finally so
-                    # whatever was collected is still saved.
+                        session_service.save_messages(turn_messages)
+
+                except WsClosed:
                     logger.info(
                         "WebSocket closed mid-turn for session %s", session_id
                     )
+                    break
 
                 except Exception as e:
                     logger.exception("Streaming error (%s)", session.mode)
                     try:
-                        _send(ws, {"type": "error", "message": str(e)})
-                    except (_WsClosed, ConnectionClosed):
-                        pass
-
-                finally:
-                    # Always persist whatever messages were collected this turn,
-                    # even if the connection dropped or an error occurred.
-                    if turn_messages:
-                        try:
-                            session_service.save_messages(turn_messages)
-                        except Exception:
-                            logger.exception(
-                                "Failed to persist messages for session %s",
-                                session_id,
-                            )
+                        ws_send(ws, {"type": "error", "message": str(e)})
+                    except WsClosed:
+                        break
 
         except Exception:
             logger.info("WebSocket disconnected for session %s", session_id)
+
+        finally:
+            if session.mode == "claude_code":
+                registry.unregister(session_id)

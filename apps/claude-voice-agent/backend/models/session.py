@@ -11,6 +11,7 @@ class Session:
     title: str = ""
     mode: str = "openai"
     claude_session_id: str | None = None
+    status: str = "idle"
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -20,6 +21,7 @@ class Session:
             "title": self.title,
             "mode": self.mode,
             "claude_session_id": self.claude_session_id,
+            "status": self.status,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }

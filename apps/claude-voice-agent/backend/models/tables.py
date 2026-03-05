@@ -16,6 +16,7 @@ sessions_table = sa.Table(
     sa.Column("title", sa.Text, nullable=False),
     sa.Column("mode", sa.Text, nullable=False),
     sa.Column("claude_session_id", sa.Text, nullable=True),
+    sa.Column("status", sa.Text, nullable=False, server_default="idle"),
     sa.Column(
         "created_at",
         sa.DateTime,

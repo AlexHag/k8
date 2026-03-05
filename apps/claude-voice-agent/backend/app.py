@@ -1,15 +1,15 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import logging
 
 from flask import Flask
 from flask_cors import CORS
 from flask_sock import Sock
 
-from config import CORS_ORIGINS, DATABASE_PATH
-from repositories.sqlite import (
-    SQLiteConnectionManager,
-    SQLiteSessionRepository,
-    SQLiteMessageRepository,
-)
+from config import CORS_ORIGINS
+from database import create_engine_from_config, create_scoped_session, check_migration_version
+from repositories import SessionRepository, MessageRepository
 from services import SessionService
 from routes import register_api_routes, register_ws_routes
 
@@ -22,12 +22,18 @@ def create_app() -> Flask:
     CORS(app, origins=CORS_ORIGINS)
     sock = Sock(app)
 
-    db = SQLiteConnectionManager(DATABASE_PATH)
-    db.init_db()
+    engine = create_engine_from_config()
+    check_migration_version(engine)
 
-    session_repo = SQLiteSessionRepository(db)
-    message_repo = SQLiteMessageRepository(db)
+    db_session = create_scoped_session(engine)
+
+    session_repo = SessionRepository(db_session)
+    message_repo = MessageRepository(db_session)
     session_service = SessionService(session_repo, message_repo)
+
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db_session.remove()
 
     register_api_routes(app, session_service)
     register_ws_routes(sock, session_service)

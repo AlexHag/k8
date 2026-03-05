@@ -6,15 +6,16 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import DATABASE_PATH
+from config import DATABASE_URL
+from models.tables import metadata
 
 config = context.config
-config.set_main_option("sqlalchemy.url", f"sqlite:///{DATABASE_PATH}")
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = None
+target_metadata = metadata
 
 
 def run_migrations_offline() -> None:
@@ -36,7 +37,11 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=True,
+        )
         with context.begin_transaction():
             context.run_migrations()
 

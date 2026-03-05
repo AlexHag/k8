@@ -7,3 +7,5 @@ gevent
 gevent-websocket
 claude-agent-sdk
 alembic
+sqlalchemy
+psycopg2

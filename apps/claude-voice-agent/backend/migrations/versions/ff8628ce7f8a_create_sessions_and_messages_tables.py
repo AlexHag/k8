@@ -46,7 +46,7 @@ def upgrade() -> None:
         sa.Column("text", sa.Text, nullable=False),
         sa.Column("tool_name", sa.Text, nullable=True),
         sa.Column("tool_input", sa.Text, nullable=True),
-        sa.Column("is_error", sa.Boolean, nullable=False, server_default=sa.text("0")),
+        sa.Column("is_error", sa.Boolean, nullable=False, server_default=sa.False_()),
         sa.Column(
             "created_at",
             sa.DateTime,

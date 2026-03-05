@@ -67,7 +67,7 @@ def start_mappers() -> None:
 
 def _is_mapped() -> bool:
     try:
-        mapper_registry.get_mapper(Session)
+        sa.inspect(Session)
         return True
-    except sa.orm.exc.UnmappedClassError:
+    except sa.exc.NoInspectionAvailable:
         return False

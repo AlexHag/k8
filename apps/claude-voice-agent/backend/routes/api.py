@@ -126,7 +126,7 @@ def register_api_routes(
 ) -> None:
     @app.route("/health")
     def health():
-        return {"status": "ok"}
+        return {"status": "ok", "num_connections": len(registry._connections), "connections": list(registry._connections.keys())}
 
     @app.route("/api/sessions", methods=["POST"])
     def create_session():

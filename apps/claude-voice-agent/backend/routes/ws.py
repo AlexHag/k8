@@ -6,7 +6,7 @@ from flask import request
 from flask_sock import Sock
 
 from services.session_service import SessionService
-from services.redis_consumer import ConnectionRegistry
+from services.redis_consumer import ConnectionRegistry, BackendRedisConsumer
 from services.tts import ws_send
 
 logger = logging.getLogger(__name__)
@@ -16,6 +16,7 @@ def register_ws_routes(
     sock: Sock,
     session_service: SessionService,
     registry: ConnectionRegistry,
+    consumer: BackendRedisConsumer,
 ) -> None:
     @sock.route("/ws")
     def websocket_handler(ws):
@@ -30,6 +31,7 @@ def register_ws_routes(
             return
 
         registry.register(session_id, ws)
+        consumer.add_session(session_id)
         logger.info(
             "WebSocket connected for session %s (mode=%s)", session_id, session.mode
         )
@@ -46,4 +48,5 @@ def register_ws_routes(
         except Exception:
             logger.info("WebSocket disconnected for session %s", session_id)
         finally:
+            consumer.remove_session(session_id)
             registry.unregister(session_id)

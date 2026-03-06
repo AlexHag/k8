@@ -15,6 +15,8 @@ from openai import OpenAI
 from config import CORS_ORIGINS, REDIS_URL, OPENAI_API_KEY
 from database import create_engine_from_config, create_scoped_session, check_migration_version
 from common.redis_streams import RedisStreamClient
+from common.registry import PodRegistry
+from common.router import SessionRouter, RandomStrategy
 from repositories import SessionRepository, MessageRepository
 from services import SessionService
 from services.redis_consumer import ConnectionRegistry, BackendRedisConsumer
@@ -39,8 +41,11 @@ def create_app() -> Flask:
     session_service = SessionService(session_repo, message_repo)
 
     redis_client = RedisStreamClient(REDIS_URL)
-    registry = ConnectionRegistry()
+    registry = ConnectionRegistry() # In-memory websocket connection registry.
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+    pod_registry = PodRegistry(redis_client)
+    router = SessionRouter(pod_registry, redis_client, RandomStrategy())
 
     consumer = BackendRedisConsumer(
         redis_client=redis_client,
@@ -58,8 +63,10 @@ def create_app() -> Flask:
     def shutdown_session(exception=None):
         db_session.remove()
 
-    register_api_routes(app, session_service, redis_client, registry, openai_client)
-    register_ws_routes(sock, session_service, registry)
+    register_api_routes(
+        app, session_service, redis_client, registry, openai_client, router
+    )
+    register_ws_routes(sock, session_service, registry, consumer)
 
     return app
 

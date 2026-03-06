@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from common.redis_streams import RedisStreamClient
+from common.registry import PodRegistry
 from consumer import AgentConsumer
 from config import REDIS_URL
 
@@ -23,14 +24,15 @@ _consumer: AgentConsumer | None = None
 async def lifespan(app: FastAPI):
     global _consumer
     redis_client = RedisStreamClient(REDIS_URL)
-    _consumer = AgentConsumer(redis_client)
+    registry = PodRegistry(redis_client)
+    _consumer = AgentConsumer(redis_client, registry)
 
     task = asyncio.create_task(_consumer.start())
     logger.info("Agent consumer task launched")
 
     yield
 
-    _consumer.stop()
+    await _consumer.stop()
     task.cancel()
     try:
         await task

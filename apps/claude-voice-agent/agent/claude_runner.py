@@ -24,7 +24,7 @@ from common.events import (
     serialize_event,
 )
 from common.redis_streams import RedisStreamClient
-from common.constants import RESPONSE_STREAM
+from common.constants import session_response_stream
 from config import CLAUDE_CLI_PATH, CLAUDE_CWD
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,7 @@ async def run_claude_session(
     redis_client: RedisStreamClient,
 ) -> None:
     """Run a Claude Code query and publish each event to Redis."""
+    response_stream = session_response_stream(session_id)
     options = ClaudeAgentOptions(
         cli_path=CLAUDE_CLI_PATH,
         permission_mode="acceptEdits",
@@ -73,7 +74,7 @@ async def run_claude_session(
                             session_id=session_id,
                             text=block.text,
                         )
-                        redis_client.publish(RESPONSE_STREAM, serialize_event(event))
+                        redis_client.publish(response_stream, serialize_event(event))
                         logger.info(
                             "[EVENT_OUT] session=%s type=text text=%r",
                             session_id,
@@ -94,7 +95,7 @@ async def run_claude_session(
                             tool_name=block.name,
                             tool_input=tool_input_str,
                         )
-                        redis_client.publish(RESPONSE_STREAM, serialize_event(event))
+                        redis_client.publish(response_stream, serialize_event(event))
                         logger.info(
                             "[EVENT_OUT] session=%s type=tool_use tool=%s",
                             session_id,
@@ -127,7 +128,7 @@ async def run_claude_session(
                             is_error=bool(block.is_error),
                             tool_use_id=block.tool_use_id,
                         )
-                        redis_client.publish(RESPONSE_STREAM, serialize_event(event))
+                        redis_client.publish(response_stream, serialize_event(event))
                         logger.info(
                             "[EVENT_OUT] session=%s type=tool_result tool_use_id=%s is_error=%s",
                             session_id,
@@ -147,7 +148,7 @@ async def run_claude_session(
                         session_id=session_id,
                         claude_session_id=message.session_id,
                     )
-                    redis_client.publish(RESPONSE_STREAM, serialize_event(event))
+                    redis_client.publish(response_stream, serialize_event(event))
                     logger.info(
                         "[EVENT_OUT] session=%s type=session_update claude_sid=%s",
                         session_id,
@@ -167,13 +168,13 @@ async def run_claude_session(
                 )
 
         done = DoneEvent(type="done", session_id=session_id)
-        redis_client.publish(RESPONSE_STREAM, serialize_event(done))
+        redis_client.publish(response_stream, serialize_event(done))
         logger.info("[EVENT_OUT] session=%s type=done", session_id)
 
     except asyncio.CancelledError:
         logger.info("Claude session %s was cancelled", session_id)
         done = DoneEvent(type="done", session_id=session_id)
-        redis_client.publish(RESPONSE_STREAM, serialize_event(done))
+        redis_client.publish(response_stream, serialize_event(done))
         logger.info("[EVENT_OUT] session=%s type=done (cancelled)", session_id)
         raise
 
@@ -184,5 +185,5 @@ async def run_claude_session(
             session_id=session_id,
             message=str(exc),
         )
-        redis_client.publish(RESPONSE_STREAM, serialize_event(err))
+        redis_client.publish(response_stream, serialize_event(err))
         logger.info("[EVENT_OUT] session=%s type=error message=%r", session_id, str(exc))

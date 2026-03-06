@@ -7,9 +7,10 @@ from flask import Flask, request, jsonify
 from openai import OpenAI
 
 from config import MODEL, VOICE, AUDIO_FORMAT
-from common.constants import PROMPT_STREAM
+from common.constants import session_prompt_stream
 from common.events import PromptEvent, serialize_event
 from common.redis_streams import RedisStreamClient
+from common.router import SessionRouter, PodDeadError, NoPodAvailableError
 from models.message import Message
 from services.session_service import SessionService
 from services.redis_consumer import ConnectionRegistry
@@ -123,6 +124,7 @@ def register_api_routes(
     redis_client: RedisStreamClient,
     registry: ConnectionRegistry,
     openai_client: OpenAI,
+    router: SessionRouter,
 ) -> None:
     @app.route("/health")
     def health():
@@ -205,13 +207,24 @@ def register_api_routes(
         session_service.update_status(session_id, "running")
 
         if session.mode == "claude_code":
+            try:
+                router.route_session(session_id)
+            except PodDeadError:
+                session_service.update_status(session_id, "error")
+                return jsonify({"error": "Agent pod that owned this session is dead"}), 503
+            except NoPodAvailableError:
+                session_service.update_status(session_id, "idle")
+                return jsonify({"error": "No agent pods available"}), 503
+
             prompt_event = PromptEvent(
                 type="prompt",
                 session_id=session_id,
                 text=text,
                 claude_session_id=session.claude_session_id,
             )
-            redis_client.publish(PROMPT_STREAM, serialize_event(prompt_event))
+            redis_client.publish(
+                session_prompt_stream(session_id), serialize_event(prompt_event)
+            )
             logger.info(
                 "[REST] session=%s published prompt to Redis — text=%r",
                 session_id,

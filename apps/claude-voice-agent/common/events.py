@@ -80,10 +80,20 @@ ResponseEventTypes = Union[
 
 
 # ---------------------------------------------------------------------------
+# Notify events (backend -> agent pod control plane)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class NotifyEvent:
+    session_id: str
+    action: str  # "start" | "stop"
+
+
+# ---------------------------------------------------------------------------
 # Serialization helpers
 # ---------------------------------------------------------------------------
 
-def serialize_event(event: PromptEventTypes | ResponseEventTypes) -> dict[str, str]:
+def serialize_event(event: PromptEventTypes | ResponseEventTypes | NotifyEvent) -> dict[str, str]:
     """Serialize a dataclass event into a flat dict of strings for Redis XADD."""
     data: dict[str, str] = {}
     for key, value in event.__dict__.items():
@@ -150,3 +160,11 @@ def deserialize_response_event(raw: dict[str, str]) -> ResponseEventTypes:
             message=raw.get("message", ""),
         )
     raise ValueError(f"Unknown response event type: {event_type}")
+
+
+def deserialize_notify_event(raw: dict[str, str]) -> NotifyEvent:
+    """Deserialize a Redis stream entry into a NotifyEvent."""
+    return NotifyEvent(
+        session_id=raw["session_id"],
+        action=raw["action"],
+    )

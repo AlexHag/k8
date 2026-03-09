@@ -54,6 +54,14 @@ services:
       - postgres
     restart: unless-stopped
 
+  redis-insight:
+    image: redis/redisinsight:latest
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
   frontend:
     build: ./frontend
     ports:

@@ -37,14 +37,12 @@ class _ClaudeSessionRunner:
         self,
         session_id: str,
         redis_client: RedisStreamClient,
-        response_stream: str,
     ) -> None:
         self._session_id = session_id
         self._redis = redis_client
-        self._stream = response_stream
 
     def _publish(self, event: TextEvent | ToolUseEvent | ToolResultEvent | SessionUpdateEvent | DoneEvent | ErrorEvent) -> None:
-        self._redis.publish(self._stream, serialize_event(event))
+        self._redis.publish(RESPONSE_STREAM, serialize_event(event))
 
     # -- block handlers -------------------------------------------------------
 
@@ -183,13 +181,14 @@ async def run_claude_session(
     redis_client: RedisStreamClient,
 ) -> None:
     """Run a Claude Code query and publish each event to Redis."""
-    runner = _ClaudeSessionRunner(session_id, redis_client, RESPONSE_STREAM)
+    runner = _ClaudeSessionRunner(session_id, redis_client)
 
     options = ClaudeAgentOptions(
         cli_path=CLAUDE_CLI_PATH,
         permission_mode="acceptEdits",
         cwd=CLAUDE_CWD,
     )
+
     if claude_session_id:
         options.resume = claude_session_id
 

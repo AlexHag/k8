@@ -4,11 +4,7 @@ import logging
 import random
 from abc import ABC, abstractmethod
 
-from .constants import (
-    RESPONSE_CONSUMER_GROUP,
-    pod_notify_key,
-    session_response_stream,
-)
+from .constants import pod_notify_key
 from .events import NotifyEvent, serialize_event
 from .redis_streams import RedisStreamClient
 from .registry import PodRegistry
@@ -84,9 +80,6 @@ class SessionRouter:
         pod_id = self._strategy.select(alive_pods)
 
         self._registry.assign_session(session_id, pod_id)
-
-        resp_stream = session_response_stream(session_id)
-        self._redis.ensure_group(resp_stream, RESPONSE_CONSUMER_GROUP)
 
         notify = NotifyEvent(session_id=session_id, action="start")
         self._redis.publish(pod_notify_key(pod_id), serialize_event(notify))

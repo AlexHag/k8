@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import json
 import logging
-import threading
+import socket
 import time
 
 from openai import OpenAI
 
-from common.constants import RESPONSE_CONSUMER_GROUP, session_response_stream
+from common.constants import RESPONSE_CONSUMER_GROUP, RESPONSE_STREAM
 from common.events import (
     deserialize_response_event,
     TextEvent,
@@ -25,10 +25,10 @@ from services.ws_connection_registry import WsConnectionRegistry
 
 logger = logging.getLogger(__name__)
 
-CONSUMER_NAME = "backend-1"
+CONSUMER_NAME = socket.gethostname() # TODO: Use hostname env var
 
 class BackendRedisConsumer:
-    """Consumes agent response events from per-session Redis streams,
+    """Consumes agent response events from Redis stream,
     persists to DB, and forwards to connected WebSocket clients with TTS."""
 
     def __init__(
@@ -45,26 +45,7 @@ class BackendRedisConsumer:
         self._running = False
         self._sequence_counters: dict[str, int] = {}
 
-        self._sessions_lock = threading.Lock()
-        self._active_sessions: set[str] = set()
-
-    # ------------------------------------------------------------------
-    # Dynamic session tracking
-    # ------------------------------------------------------------------
-
-    def add_session(self, session_id: str) -> None:
-        """Start consuming the response stream for *session_id*."""
-        stream = session_response_stream(session_id)
-        self._redis.ensure_group(stream, RESPONSE_CONSUMER_GROUP)
-        with self._sessions_lock:
-            self._active_sessions.add(session_id)
-        logger.info("Consumer now tracking session %s", session_id)
-
-    def remove_session(self, session_id: str) -> None:
-        """Stop consuming the response stream for *session_id*."""
-        with self._sessions_lock:
-            self._active_sessions.discard(session_id)
-        logger.info("Consumer stopped tracking session %s", session_id)
+        self._redis.ensure_group(RESPONSE_STREAM, RESPONSE_CONSUMER_GROUP)
 
     # ------------------------------------------------------------------
     # Main loop
@@ -82,57 +63,45 @@ class BackendRedisConsumer:
     def run(self) -> None:
         """Blocking consumer loop -- meant to run in a background thread."""
         self._running = True
-        logger.info("Backend Redis consumer started (multi-stream mode)")
+        logger.info("Backend Redis consumer started")
 
         while self._running:
-            with self._sessions_lock:
-                session_ids = set(self._active_sessions)
-
-            if not session_ids:
-                time.sleep(0.5)
-                continue
-
-            streams = {
-                session_response_stream(sid): ">"
-                for sid in session_ids
-            }
-
             try:
-                entries = self._redis.read_multi(
-                    streams,
+                entries = self._redis.read(
+                    RESPONSE_STREAM,
                     RESPONSE_CONSUMER_GROUP,
                     CONSUMER_NAME,
                     count=10,
                     block_ms=2000,
                 )
             except Exception:
-                logger.exception("Error reading from Redis response streams")
+                logger.exception("Error reading from Redis response stream")
                 time.sleep(1)
                 continue
 
-            for stream_name, entry_id, fields in entries:
+            for entry_id, fields in entries:
                 logger.info(
                     "[EVENT_IN] stream=%s entry_id=%s raw_fields=%s",
-                    stream_name, entry_id, fields,
+                    RESPONSE_STREAM, entry_id, fields,
                 )
                 try:
                     event = deserialize_response_event(fields)
                     self._handle_event(event)
                 except Exception:
                     logger.exception(
-                        "Error handling response event %s from %s",
-                        entry_id, stream_name,
+                        "Error handling response event %s",
+                        entry_id,
                     )
                 finally:
                     self._redis.ack(
-                        stream_name, RESPONSE_CONSUMER_GROUP, entry_id
+                        RESPONSE_STREAM, RESPONSE_CONSUMER_GROUP, entry_id
                     )
 
     def stop(self) -> None:
         self._running = False
 
     # ------------------------------------------------------------------
-    # Event handling (unchanged from single-stream version)
+    # Event handling
     # ------------------------------------------------------------------
 
     def _handle_event(self, event) -> None:
@@ -223,7 +192,6 @@ class BackendRedisConsumer:
         logger.info("[EVENT_IN] session=%s type=done", session_id)
         self._session_service.update_status(session_id, "idle")
         self._sequence_counters.pop(session_id, None)
-        self.remove_session(session_id)
         if ws:
             try:
                 ws_send(ws, {"type": "done"})
@@ -240,7 +208,6 @@ class BackendRedisConsumer:
         )
         self._session_service.update_status(session_id, "error")
         self._sequence_counters.pop(session_id, None)
-        self.remove_session(session_id)
         if ws:
             try:
                 ws_send(ws, {"type": "error", "message": event.message})

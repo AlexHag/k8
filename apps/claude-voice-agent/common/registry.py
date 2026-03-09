@@ -9,7 +9,6 @@ from .constants import (
     pod_notify_key,
     session_pod_key,
     session_prompt_stream,
-    session_response_stream,
 )
 from .redis_streams import RedisStreamClient
 
@@ -88,7 +87,6 @@ class PodRegistry:
         for session_id in sessions:
             self._redis.delete_key(session_pod_key(session_id))
             self._redis.delete_stream(session_prompt_stream(session_id))
-            self._redis.delete_stream(session_response_stream(session_id))
 
         self._redis.srem(PODS_ALIVE_SET, pod_id)
         self._redis.delete_key(
@@ -100,6 +98,5 @@ class PodRegistry:
         return sessions
 
     def cleanup_session_streams(self, session_id: str) -> None:
-        """Delete the prompt and response streams for a single session."""
+        """Delete the prompt stream for a single session."""
         self._redis.delete_stream(session_prompt_stream(session_id))
-        self._redis.delete_stream(session_response_stream(session_id))

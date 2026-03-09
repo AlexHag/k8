@@ -27,8 +27,7 @@ def session_prompt_stream(session_id: str) -> str:
     return f"agent:session:{session_id}:prompts"
 
 
-def session_response_stream(session_id: str) -> str:
-    return f"agent:session:{session_id}:responses"
+RESPONSE_STREAM = "agent:session:responses"
 
 
 # ---------------------------------------------------------------------------

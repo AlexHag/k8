@@ -24,7 +24,7 @@ from common.events import (
     serialize_event,
 )
 from common.redis_streams import RedisStreamClient
-from common.constants import session_response_stream
+from common.constants import RESPONSE_STREAM
 from config import CLAUDE_CLI_PATH, CLAUDE_CWD
 
 logger = logging.getLogger(__name__)
@@ -183,8 +183,7 @@ async def run_claude_session(
     redis_client: RedisStreamClient,
 ) -> None:
     """Run a Claude Code query and publish each event to Redis."""
-    response_stream = session_response_stream(session_id)
-    runner = _ClaudeSessionRunner(session_id, redis_client, response_stream)
+    runner = _ClaudeSessionRunner(session_id, redis_client, RESPONSE_STREAM)
 
     options = ClaudeAgentOptions(
         cli_path=CLAUDE_CLI_PATH,

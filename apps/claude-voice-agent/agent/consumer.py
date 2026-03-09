@@ -6,9 +6,9 @@ import logging
 from common.constants import (
     NOTIFY_CONSUMER_GROUP,
     PROMPT_CONSUMER_GROUP,
+    RESPONSE_STREAM,
     pod_notify_key,
     session_prompt_stream,
-    session_response_stream,
 )
 from common.events import (
     deserialize_notify_event,
@@ -83,7 +83,7 @@ class AgentConsumer:
                     message="Agent pod shutting down",
                 )
                 self._redis.publish(
-                    session_response_stream(session_id),
+                    RESPONSE_STREAM,
                     serialize_event(err),
                 )
             except Exception:

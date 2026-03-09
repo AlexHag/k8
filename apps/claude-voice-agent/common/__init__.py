@@ -10,7 +10,7 @@ from .constants import (
     pod_notify_key,
     session_pod_key,
     session_prompt_stream,
-    session_response_stream,
+    RESPONSE_STREAM,
 )
 from .events import (
     PromptEvent,
@@ -44,7 +44,7 @@ __all__ = [
     "pod_notify_key",
     "session_pod_key",
     "session_prompt_stream",
-    "session_response_stream",
+    "RESPONSE_STREAM",
     # events
     "PromptEvent",
     "CancelEvent",

@@ -159,6 +159,7 @@ def deserialize_response_event(raw: dict[str, str]) -> ResponseEventTypes:
             session_id=raw["session_id"],
             message=raw.get("message", ""),
         )
+
     raise ValueError(f"Unknown response event type: {event_type}")
 
 

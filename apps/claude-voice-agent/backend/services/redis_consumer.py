@@ -136,88 +136,116 @@ class BackendRedisConsumer:
     # ------------------------------------------------------------------
 
     def _handle_event(self, event) -> None:
+        if isinstance(event, TextEvent):
+            self._process_text_event(event)
+
+        elif isinstance(event, ToolUseEvent):
+            self._process_tool_use_event(event)
+
+        elif isinstance(event, ToolResultEvent):
+            self._process_tool_result_event(event)
+
+        elif isinstance(event, SessionUpdateEvent):
+            self._process_session_update_event(event)
+
+        elif isinstance(event, DoneEvent):
+            self._process_done_event(event)
+
+        elif isinstance(event, ErrorEvent):
+            self._process_error_event(event)
+    
+    def _process_text_event(self, event: TextEvent) -> None:
         session_id = event.session_id
         ws = self._registry.get(session_id)
 
-        if isinstance(event, TextEvent):
-            logger.info(
-                "[EVENT_IN] session=%s type=text text=%r",
-                session_id, event.text[:200],
-            )
-            self._persist_message(
-                session_id=session_id, role="assistant", text=event.text,
-            )
-            if ws:
-                session = self._session_service.get_session(session_id)
-                voice_enabled = session.voice_mode if session else False
-                try:
-                    if voice_enabled:
-                        process_text_block(ws, event.text, self._openai)
-                    else:
-                        ws_send(ws, {"type": "text_delta", "text": event.text})
-                except WsClosed:
-                    self._registry.unregister(session_id)
+        self._persist_message(
+            session_id=session_id, role="assistant", text=event.text,
+        )
+        if ws:
+            session = self._session_service.get_session(session_id)
+            voice_enabled = session.voice_mode if session else False
+            try:
+                if voice_enabled:
+                    process_text_block(ws, event.text, self._openai)
+                else:
+                    ws_send(ws, {"type": "text_delta", "text": event.text})
+            except WsClosed:
+                self._registry.unregister(session_id)
+    
+    def _process_tool_use_event(self, event: ToolUseEvent) -> None:
+        session_id = event.session_id
+        ws = self._registry.get(session_id)
 
-        elif isinstance(event, ToolUseEvent):
-            self._persist_message(
-                session_id=session_id, role="tool_use", text=event.tool_input,
-                tool_name=event.tool_name, tool_input=event.tool_input,
-            )
-            if ws:
-                try:
-                    ws_send(ws, {
-                        "type": "tool_use",
-                        "tool": event.tool_name,
-                        "input": json.loads(event.tool_input),
-                    })
-                except WsClosed:
-                    self._registry.unregister(session_id)
+        self._persist_message(
+            session_id=session_id, role="tool_use", text=event.tool_input,
+            tool_name=event.tool_name, tool_input=event.tool_input,
+        )
+        if ws:
+            try:
+                ws_send(ws, {
+                    "type": "tool_use",
+                    "tool": event.tool_name,
+                    "input": json.loads(event.tool_input),
+                })
+            except WsClosed:
+                self._registry.unregister(session_id)
+    
+    def _process_tool_result_event(self, event: ToolResultEvent) -> None:
+        session_id = event.session_id
+        ws = self._registry.get(session_id)
 
-        elif isinstance(event, ToolResultEvent):
-            self._persist_message(
-                session_id=session_id, role="tool_result", text=event.content,
-                is_error=event.is_error,
-            )
-            if ws:
-                try:
-                    ws_send(ws, {
-                        "type": "tool_result",
-                        "tool_use_id": event.tool_use_id,
-                        "content": event.content,
-                        "is_error": event.is_error,
-                    })
-                except WsClosed:
-                    self._registry.unregister(session_id)
+        self._persist_message(
+            session_id=session_id, role="tool_result", text=event.content,
+            is_error=event.is_error,
+        )
+        if ws:
+            try:
+                ws_send(ws, {
+                    "type": "tool_result",
+                    "tool_use_id": event.tool_use_id,
+                    "content": event.content,
+                    "is_error": event.is_error,
+                })
+            except WsClosed:
+                self._registry.unregister(session_id)
+    
+    def _process_session_update_event(self, event: SessionUpdateEvent) -> None:
+        session_id = event.session_id
 
-        elif isinstance(event, SessionUpdateEvent):
-            self._session_service.update_claude_session_id(
-                session_id, event.claude_session_id,
-            )
+        self._session_service.update_claude_session_id(
+            session_id, event.claude_session_id,
+        )
 
-        elif isinstance(event, DoneEvent):
-            logger.info("[EVENT_IN] session=%s type=done", session_id)
-            self._session_service.update_status(session_id, "idle")
-            self._sequence_counters.pop(session_id, None)
-            self.remove_session(session_id)
-            if ws:
-                try:
-                    ws_send(ws, {"type": "done"})
-                except WsClosed:
-                    self._registry.unregister(session_id)
+    def _process_done_event(self, event: DoneEvent) -> None:
+        session_id = event.session_id
+        ws = self._registry.get(session_id)
 
-        elif isinstance(event, ErrorEvent):
-            logger.info(
-                "[EVENT_IN] session=%s type=error message=%r",
-                session_id, event.message,
-            )
-            self._session_service.update_status(session_id, "error")
-            self._sequence_counters.pop(session_id, None)
-            self.remove_session(session_id)
-            if ws:
-                try:
-                    ws_send(ws, {"type": "error", "message": event.message})
-                except WsClosed:
-                    self._registry.unregister(session_id)
+        logger.info("[EVENT_IN] session=%s type=done", session_id)
+        self._session_service.update_status(session_id, "idle")
+        self._sequence_counters.pop(session_id, None)
+        self.remove_session(session_id)
+        if ws:
+            try:
+                ws_send(ws, {"type": "done"})
+            except WsClosed:
+                self._registry.unregister(session_id)
+    
+    def _process_error_event(self, event: ErrorEvent) -> None:
+        session_id = event.session_id
+        ws = self._registry.get(session_id)
+
+        logger.info(
+            "[EVENT_IN] session=%s type=error message=%r",
+            session_id, event.message,
+        )
+        self._session_service.update_status(session_id, "error")
+        self._sequence_counters.pop(session_id, None)
+        self.remove_session(session_id)
+        if ws:
+            try:
+                ws_send(ws, {"type": "error", "message": event.message})
+            except WsClosed:
+                self._registry.unregister(session_id)
 
     def _persist_message(
         self,

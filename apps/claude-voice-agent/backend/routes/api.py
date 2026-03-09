@@ -13,7 +13,8 @@ from common.redis_streams import RedisStreamClient
 from common.router import SessionRouter, PodDeadError, NoPodAvailableError
 from models.message import Message
 from services.session_service import SessionService
-from services.redis_consumer import ConnectionRegistry, BackendRedisConsumer
+from services.redis_consumer import BackendRedisConsumer
+from services.ws_connection_registry import WsConnectionRegistry
 from services.tts import WsClosed, ws_send
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ def _handle_openai_background(
     session_id: str,
     session_service: SessionService,
     openai_client: OpenAI,
-    registry: ConnectionRegistry,
+    registry: WsConnectionRegistry,
 ) -> None:
     """Run OpenAI streaming in a background thread, pushing audio to the WS."""
     try:
@@ -122,7 +123,7 @@ def register_api_routes(
     app: Flask,
     session_service: SessionService,
     redis_client: RedisStreamClient,
-    registry: ConnectionRegistry,
+    registry: WsConnectionRegistry,
     openai_client: OpenAI,
     router: SessionRouter,
     consumer: BackendRedisConsumer,

@@ -6,7 +6,7 @@ from flask import request
 from flask_sock import Sock
 
 from services.session_service import SessionService
-from services.redis_consumer import ConnectionRegistry
+from services.ws_connection_registry import WsConnectionRegistry
 from services.tts import ws_send
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def register_ws_routes(
     sock: Sock,
     session_service: SessionService,
-    registry: ConnectionRegistry,
+    registry: WsConnectionRegistry,
 ) -> None:
     @sock.route("/ws")
     def websocket_handler(ws):

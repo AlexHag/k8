@@ -19,7 +19,8 @@ from common.registry import PodRegistry
 from common.router import SessionRouter, RandomStrategy
 from repositories import SessionRepository, MessageRepository
 from services import SessionService
-from services.redis_consumer import ConnectionRegistry, BackendRedisConsumer
+from services.redis_consumer import BackendRedisConsumer
+from services.ws_connection_registry import WsConnectionRegistry
 from routes import register_api_routes, register_ws_routes
 
 logging.basicConfig(level=logging.INFO)
@@ -41,7 +42,7 @@ def create_app() -> Flask:
     session_service = SessionService(session_repo, message_repo)
 
     redis_client = RedisStreamClient(REDIS_URL)
-    registry = ConnectionRegistry() # In-memory websocket connection registry.
+    registry = WsConnectionRegistry() # In-memory websocket connection registry.
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
     pod_registry = PodRegistry(redis_client)

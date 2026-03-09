@@ -21,31 +21,11 @@ from common.redis_streams import RedisStreamClient
 from models.message import Message
 from services.session_service import SessionService
 from services.tts import WsClosed, ws_send, process_text_block
+from services.ws_connection_registry import WsConnectionRegistry
 
 logger = logging.getLogger(__name__)
 
 CONSUMER_NAME = "backend-1"
-
-
-class ConnectionRegistry:
-    """Thread-safe registry mapping session_id -> active WebSocket."""
-
-    def __init__(self) -> None:
-        self._lock = threading.Lock()
-        self._connections: dict[str, object] = {}
-
-    def register(self, session_id: str, ws) -> None:
-        with self._lock:
-            self._connections[session_id] = ws
-
-    def unregister(self, session_id: str) -> None:
-        with self._lock:
-            self._connections.pop(session_id, None)
-
-    def get(self, session_id: str):
-        with self._lock:
-            return self._connections.get(session_id)
-
 
 class BackendRedisConsumer:
     """Consumes agent response events from per-session Redis streams,
@@ -56,7 +36,7 @@ class BackendRedisConsumer:
         redis_client: RedisStreamClient,
         session_service: SessionService,
         openai_client: OpenAI,
-        registry: ConnectionRegistry,
+        registry: WsConnectionRegistry,
     ) -> None:
         self._redis = redis_client
         self._session_service = session_service

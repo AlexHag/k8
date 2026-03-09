@@ -13,7 +13,7 @@ from common.redis_streams import RedisStreamClient
 from common.router import SessionRouter, PodDeadError, NoPodAvailableError
 from models.message import Message
 from services.session_service import SessionService
-from services.redis_consumer import ConnectionRegistry
+from services.redis_consumer import ConnectionRegistry, BackendRedisConsumer
 from services.tts import WsClosed, ws_send
 
 logger = logging.getLogger(__name__)
@@ -125,6 +125,7 @@ def register_api_routes(
     registry: ConnectionRegistry,
     openai_client: OpenAI,
     router: SessionRouter,
+    consumer: BackendRedisConsumer,
 ) -> None:
     @app.route("/health")
     def health():
@@ -215,6 +216,8 @@ def register_api_routes(
             except NoPodAvailableError:
                 session_service.update_status(session_id, "idle")
                 return jsonify({"error": "No agent pods available"}), 503
+
+            consumer.add_session(session_id)
 
             prompt_event = PromptEvent(
                 type="prompt",

@@ -64,9 +64,9 @@ def create_app() -> Flask:
         db_session.remove()
 
     register_api_routes(
-        app, session_service, redis_client, registry, openai_client, router
+        app, session_service, redis_client, registry, openai_client, router, consumer
     )
-    register_ws_routes(sock, session_service, registry, consumer)
+    register_ws_routes(sock, session_service, registry)
 
     return app
 

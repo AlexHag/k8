@@ -218,6 +218,7 @@ class BackendRedisConsumer:
             logger.info("[EVENT_IN] session=%s type=done", session_id)
             self._session_service.update_status(session_id, "idle")
             self._sequence_counters.pop(session_id, None)
+            self.remove_session(session_id)
             if ws:
                 try:
                     ws_send(ws, {"type": "done"})
@@ -231,6 +232,7 @@ class BackendRedisConsumer:
             )
             self._session_service.update_status(session_id, "error")
             self._sequence_counters.pop(session_id, None)
+            self.remove_session(session_id)
             if ws:
                 try:
                     ws_send(ws, {"type": "error", "message": event.message})

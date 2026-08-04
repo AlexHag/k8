@@ -128,6 +128,18 @@ gcloud iam workload-identity-pools providers create-oidc ${WORKLOAD_IDENTITY_PRO
   --attribute-condition="assertion.repository == '${GITHUB_ORG}/${GITHUB_REPO}'"
 ```
 
+The attribute condition for the provider doesn't have to be for a specific github repo, but instead we can have it for `assertion.repository_owner == '${GITHUB_ORG}'` so that we can re-use this pool in other repos.
+```sh
+# Update
+gcloud iam workload-identity-pools providers update-oidc ${WORKLOAD_IDENTITY_PROVIDER} \
+  --project=${GOOGLE_PROJECT} \
+  --location=${LOCATION} \
+  --workload-identity-pool=${WORKLOAD_IDENTITY_POOL} \
+  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
+  --attribute-condition="assertion.repository_owner == '${GITHUB_ORG}'"
+```
+
+
 5. Allow the Service Account to be impersonated via Workflow Identity Federation through the specified repository
 ```sh
 PROJECT_NUMBER=$(gcloud projects describe $GOOGLE_PROJECT --format="value(projectNumber)")
